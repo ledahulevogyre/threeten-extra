@@ -76,7 +76,7 @@ public final class FrenchRepublicChronology
      * Range of weeks.
      */
     static final ValueRange ALIGNED_WOM_RANGE = ValueRange.of(1, 1, 3);
-    
+
     /**
      * Private constructor, that is public to satisfy the {@code ServiceLoader}.
      * @deprecated Use the singleton {@link #INSTANCE} instead.
@@ -308,14 +308,12 @@ public final class FrenchRepublicChronology
     public ValueRange range(ChronoField field) {
         if (field == DAY_OF_WEEK) {
             return DOW_RANGE;
-        } else if (WeekFields.ISO.dayOfWeek().equals(field)) {
-            return DOW_RANGE;
         } else if (field == ALIGNED_WEEK_OF_MONTH) {
             return ALIGNED_WOM_RANGE;
         }
         return super.range(field);
     }
-    
+
     //-----------------------------------------------------------------------
     @Override
     public int prolepticYear(Era era, int yearOfEra) {
