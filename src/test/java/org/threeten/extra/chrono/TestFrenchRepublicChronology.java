@@ -330,7 +330,9 @@ public class TestFrenchRepublicChronology {
     @Test
     public void test_isLeapYear_loop() {
         for (int year = -200; year < 200; year++) {
-            assertEquals(FrenchRepublicChronology.INSTANCE.isLeapYear(year), ((year + 1) & 3) == 0);
+            FrenchRepublicDate base = FrenchRepublicDate.of(year, 1, 1);
+            assertEquals(base.isLeapYear(), ((year+1) % 4) == 0);
+            assertEquals(FrenchRepublicChronology.INSTANCE.isLeapYear(year), ((year+1) % 4) == 0);
         }
     }
 

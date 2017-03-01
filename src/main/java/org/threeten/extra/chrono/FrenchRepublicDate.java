@@ -199,22 +199,6 @@ public final class FrenchRepublicDate
         return ValueRange.of(1, getMonth() == 13 ? 1 : 3);
     }
 
-    @Override
-    public ValueRange range(TemporalField field) {
-        if (DAY_OF_WEEK.equals(field)) {
-            return DOW_RANGE;
-        }
-
-        return super.range(field);
-    }
-
-    @Override
-    public long getLong(TemporalField field) {
-        if (DAY_OF_WEEK.equals(field)) {
-            return day;
-        }
-        return super.getLong(field);
-    }
 
     @Override
     int getDayOfWeek() {
