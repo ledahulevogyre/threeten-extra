@@ -300,7 +300,7 @@ public final class FrenchRepublicDate
      */
     static FrenchRepublicDate ofEpochDay(final long epochDay) {
         EPOCH_DAY.range().checkValidValue(epochDay, EPOCH_DAY);  // validate outer bounds
-        // use of French Rev. -1 makes leap year at the end of cycle
+        // use of French Republican year - 1 places leap year at the end of cycle
         long frenchRevEpochDayPlus365 = epochDay + EPOCH_DAY_DIFFERENCE + 365;
         long cycle = Math.floorDiv(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
         long daysInCycle = Math.floorMod(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
@@ -358,8 +358,8 @@ public final class FrenchRepublicDate
         this.prolepticYear = prolepticYear;
         this.month = month;
         this.day = dayOfMonth;
-        long calendarEpochDay = (prolepticYear * 365) + Math.floorDiv(prolepticYear, 4) + (getDayOfYear() - 1);
-        this.epochDay = calendarEpochDay - 365 - EPOCH_DAY_DIFFERENCE;
+        this.epochDay = ((prolepticYear - 1) * 365) + Math.floorDiv(prolepticYear, 4) +
+                (getDayOfYear() - 1) - EPOCH_DAY_DIFFERENCE;
     }
 
     /**
