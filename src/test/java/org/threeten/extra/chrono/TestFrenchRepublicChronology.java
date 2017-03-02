@@ -464,7 +464,7 @@ public class TestFrenchRepublicChronology {
     @Test
     public void test_Chronology_range() {
         assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_WEEK), ValueRange.of(1, 10));
-        assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_MONTH), ValueRange.of(1, 5, 30));
+        assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_MONTH), ValueRange.of(1, 30));
         assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_YEAR), ValueRange.of(1, 365, 366));
         assertEquals(FrenchRepublicChronology.INSTANCE.range(MONTH_OF_YEAR), ValueRange.of(1, 13));
     }
