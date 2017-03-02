@@ -478,9 +478,6 @@ public final class FrenchRepublicDate
 
     @Override
     FrenchRepublicDate plusDays(long days) {
-        if (days % 10 == 0) {
-            return plusWeeks(days / 10);
-        }
         return (FrenchRepublicDate) super.plusDays(days);
     }
 

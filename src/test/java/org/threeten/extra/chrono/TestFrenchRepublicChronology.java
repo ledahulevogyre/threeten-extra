@@ -240,6 +240,7 @@ public class TestFrenchRepublicChronology {
         assertEquals(LocalDate.from(frenchRepublic.plus(35, DAYS)), iso.plusDays(35));
         assertEquals(LocalDate.from(frenchRepublic.plus(-1, DAYS)), iso.plusDays(-1));
         assertEquals(LocalDate.from(frenchRepublic.plus(-59, DAYS)), iso.plusDays(-59));
+        assertEquals(LocalDate.from(frenchRepublic.plus(-60, DAYS)), iso.plusDays(-60));
     }
 
     @Test(dataProvider = "samples")
@@ -249,6 +250,7 @@ public class TestFrenchRepublicChronology {
         assertEquals(LocalDate.from(frenchRepublic.minus(35, DAYS)), iso.minusDays(35));
         assertEquals(LocalDate.from(frenchRepublic.minus(-1, DAYS)), iso.minusDays(-1));
         assertEquals(LocalDate.from(frenchRepublic.minus(-57, DAYS)), iso.minusDays(-57));
+        assertEquals(LocalDate.from(frenchRepublic.minus(-60, DAYS)), iso.minusDays(-60));
     }
 
     @Test(dataProvider = "samples")
@@ -609,6 +611,13 @@ public class TestFrenchRepublicChronology {
         FrenchRepublicDate base = FrenchRepublicDate.of(3, 12, 2);
         FrenchRepublicDate test = base.with(TemporalAdjusters.lastDayOfMonth());
         assertEquals(test, FrenchRepublicDate.of(3, 12, 30));
+    }
+
+    @Test
+    public void test_adjust3() {
+        FrenchRepublicDate base = FrenchRepublicDate.of(3, 5, 2);
+        FrenchRepublicDate test = base.with(TemporalAdjusters.lastDayOfYear());
+        assertEquals(test, FrenchRepublicDate.of(3, 13, 6));
     }
 
     //-----------------------------------------------------------------------
