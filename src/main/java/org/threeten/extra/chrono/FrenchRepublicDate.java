@@ -301,9 +301,9 @@ public final class FrenchRepublicDate
     static FrenchRepublicDate ofEpochDay(final long epochDay) {
         EPOCH_DAY.range().checkValidValue(epochDay, EPOCH_DAY);  // validate outer bounds
         // use of French Republican year - 1 places leap year at the end of cycle
-        long frenchRevEpochDayPlus365 = epochDay + EPOCH_DAY_DIFFERENCE + 365;
-        long cycle = Math.floorDiv(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
-        long daysInCycle = Math.floorMod(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
+        long epochDays = epochDay + EPOCH_DAY_DIFFERENCE + 365;
+        long cycle = Math.floorDiv(epochDays, DAYS_PER_CYCLE);
+        long daysInCycle = Math.floorMod(epochDays, DAYS_PER_CYCLE);
         if (daysInCycle == DAYS_PER_CYCLE - 1) {
             int year = (int) (cycle * 4 + 3);
             return ofYearDay(year, 366);
