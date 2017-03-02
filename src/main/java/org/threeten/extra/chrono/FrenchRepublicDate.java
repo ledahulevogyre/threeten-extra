@@ -32,7 +32,6 @@
 package org.threeten.extra.chrono;
 
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
-import static java.time.temporal.ChronoField.DAY_OF_WEEK;
 import static java.time.temporal.ChronoField.DAY_OF_YEAR;
 import static java.time.temporal.ChronoField.EPOCH_DAY;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
@@ -55,9 +54,9 @@ import java.time.temporal.TemporalAmount;
 import java.time.temporal.TemporalField;
 import java.time.temporal.TemporalQuery;
 import java.time.temporal.TemporalUnit;
+import java.time.temporal.UnsupportedTemporalTypeException;
 import java.time.temporal.ValueRange;
-import java.time.temporal.WeekFields;
-import static org.threeten.extra.chrono.FrenchRepublicChronology.DOW_RANGE;
+
 
 /**
  * A date in the FrenchRepublic calendar system.
@@ -74,7 +73,7 @@ import static org.threeten.extra.chrono.FrenchRepublicChronology.DOW_RANGE;
  * identity hash code or use the distinction between equals() and ==.
  */
 public final class FrenchRepublicDate
-        extends AbstractNileDate
+        extends AbstractDate
         implements ChronoLocalDate, Serializable {
 
     /**
@@ -98,11 +97,15 @@ public final class FrenchRepublicDate
     /**
      * The month.
      */
-    private final short month;
+    private final int month;
     /**
      * The day.
      */
-    private final short day;
+    private final int day;
+    /**
+     * Epoch day
+     */
+    private final long epochDay;
 
     //-----------------------------------------------------------------------
     /**
@@ -196,13 +199,16 @@ public final class FrenchRepublicDate
 
     @Override
     ValueRange rangeAlignedWeekOfMonth() {
-        return ValueRange.of(1, getMonth() == 13 ? 1 : 3);
+        return ValueRange.of(getMonth() != 13 ? 1 : 0, getMonth() != 13 ? 3 : 0);
     }
 
 
     @Override
     int getDayOfWeek() {
-        return (int) Math.floorMod(day, 10);
+        if (month == 13) {
+            return 0;
+        }
+        return Math.floorMod(day, 10);
     }
 
     @Override
@@ -210,8 +216,57 @@ public final class FrenchRepublicDate
         return 10;
     }
 
+    @Override
+    public int lengthOfMonth() {
+        if (getMonth() != 13) {
+            return 30;
+        }
+        return 0;
+    }
 
+    @Override
+    int lengthOfYearInMonths() {
+        return 12;
+    }
 
+    @Override
+    int getDayOfYear() {
+        return (getMonth() - 1) * 30 + getDayOfMonth();
+    }
+
+    @Override
+    public ValueRange range(TemporalField field) {
+        if (field instanceof ChronoField) {
+            if (isSupported(field)) {
+                ChronoField f = (ChronoField) field;
+                switch (f) {
+                    case ALIGNED_DAY_OF_WEEK_IN_MONTH:
+                    case ALIGNED_DAY_OF_WEEK_IN_YEAR:
+                    case DAY_OF_WEEK:
+                        return month != 13 ? FrenchRepublicChronology.DOW_RANGE : FrenchRepublicChronology.EMPTY;
+                    case ALIGNED_WEEK_OF_MONTH:
+                        return month != 13 ? ValueRange.of(1, 3) : FrenchRepublicChronology.EMPTY;
+                    case ALIGNED_WEEK_OF_YEAR:
+                        return month != 13 ? ValueRange.of(1, 36) : FrenchRepublicChronology.EMPTY;
+                    case DAY_OF_MONTH:
+                        return month != 13 ? ValueRange.of(1, lengthOfMonth()) : FrenchRepublicChronology.EMPTY;
+                    case DAY_OF_YEAR:
+                        return isLeapYear() ? ValueRange.of(1, 366) : ValueRange.of(1, 365);
+                    //case EPOCH_DAY:
+                    //    return ValueRange.of(-999_999, 999_999);
+                    //case ERA:
+                    //    return ERA_RANGE;
+                    case MONTH_OF_YEAR:
+                        return ValueRange.of(1, 12);
+                    default:
+                        break;
+                }
+            } else {
+                throw new UnsupportedTemporalTypeException("Unsupported field: " + field);
+            }
+        }
+        return super.range(field);
+    }
     //-----------------------------------------------------------------------
     /**
      * Obtains a {@code FrenchRepublicDate} representing a date in the FrenchRepublic calendar
@@ -245,10 +300,10 @@ public final class FrenchRepublicDate
      */
     static FrenchRepublicDate ofEpochDay(final long epochDay) {
         EPOCH_DAY.range().checkValidValue(epochDay, EPOCH_DAY);  // validate outer bounds
-        // use of French Rev. -1 makes leap year at the end of cycle
-        long frenchRevEpochDayPlus365 = epochDay + EPOCH_DAY_DIFFERENCE + 365;
-        long cycle = Math.floorDiv(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
-        long daysInCycle = Math.floorMod(frenchRevEpochDayPlus365, DAYS_PER_CYCLE);
+        // use of French Republican year - 1 places leap year at the end of cycle
+        long epochDays = epochDay + EPOCH_DAY_DIFFERENCE + 365;
+        long cycle = Math.floorDiv(epochDays, DAYS_PER_CYCLE);
+        long daysInCycle = Math.floorMod(epochDays, DAYS_PER_CYCLE);
         if (daysInCycle == DAYS_PER_CYCLE - 1) {
             int year = (int) (cycle * 4 + 3);
             return ofYearDay(year, 366);
@@ -301,8 +356,10 @@ public final class FrenchRepublicDate
      */
     private FrenchRepublicDate(int prolepticYear, int month, int dayOfMonth) {
         this.prolepticYear = prolepticYear;
-        this.month = (short) month;
-        this.day = (short) dayOfMonth;
+        this.month = month;
+        this.day = dayOfMonth;
+        this.epochDay = ((prolepticYear - 1) * 365) + Math.floorDiv(prolepticYear, 4) +
+                (getDayOfYear() - 1) - EPOCH_DAY_DIFFERENCE;
     }
 
     /**
@@ -315,10 +372,6 @@ public final class FrenchRepublicDate
     }
 
     //-----------------------------------------------------------------------
-    @Override
-    int getEpochDayDifference() {
-        return EPOCH_DAY_DIFFERENCE;
-    }
 
     @Override
     int getProlepticYear() {
@@ -333,6 +386,10 @@ public final class FrenchRepublicDate
     @Override
     int getDayOfMonth() {
         return day;
+    }
+
+    private long getProlepticWeek() {
+        return getProlepticMonth() * 3 + ((getDayOfMonth() - 1) / 10) - 1;
     }
 
     @Override
@@ -357,7 +414,7 @@ public final class FrenchRepublicDate
     /**
      * Gets the era applicable at this date.
      * <p>
-     * The FrenchRepublic calendar system has two eras, 'AM' and 'BEFORE_AM',
+     * The FrenchRepublic calendar system has two eras, 'REPUBLICAN' and 'BEFORE_REPUBLICAN',
      * defined by {@link FrenchRepublicEra}.
      *
      * @return the era applicable at this date, not null
@@ -389,6 +446,44 @@ public final class FrenchRepublicDate
         return (FrenchRepublicDate) super.plus(amountToAdd, unit);
     }
 
+    /*
+    */
+    @Override
+    FrenchRepublicDate plusMonths(long months) {
+        if (months % 12 == 0) {
+            return (FrenchRepublicDate) plusYears(months / 12);
+        }
+        if (month == 13 || 0 == months) {
+            return this;
+        }
+        return (FrenchRepublicDate) super.plusMonths(months);
+    }
+
+    @Override
+    FrenchRepublicDate plusWeeks(long weeks) {
+        if (weeks % 3 == 0) {
+            return plusMonths(weeks / 3);
+        }
+        if (month == 13 || 0 == weeks) {
+            return this;
+        }
+        long curEm = getProlepticWeek();
+        long calcEm = Math.addExact(curEm, weeks) + 1;
+        int newYear = Math.toIntExact(Math.floorDiv(calcEm, lengthOfYearInMonths() * 3));
+        int yearWeeks = (int) Math.floorMod(calcEm, lengthOfYearInMonths() * 3);
+        int weekDays = ((getDayOfMonth() - 1) % lengthOfWeek()) + 1;
+        int newMonth = yearWeeks / 3 + 1;
+        return resolvePrevious(newYear, newMonth, (yearWeeks % 3) * lengthOfWeek() + weekDays);
+    }
+
+    @Override
+    FrenchRepublicDate plusDays(long days) {
+        if (days % 10 == 0) {
+            return plusWeeks(days / 10);
+        }
+        return (FrenchRepublicDate) super.plusDays(days);
+    }
+
     @Override
     public FrenchRepublicDate minus(TemporalAmount amount) {
         return (FrenchRepublicDate) amount.subtractFrom(this);
@@ -418,8 +513,6 @@ public final class FrenchRepublicDate
 
     @Override
     public long toEpochDay() {
-        long year = (long) getProlepticYear();
-        long calendarEpochDay = (year * 365) + Math.floorDiv(year, 4) + (getDayOfYear() - 1);
-        return calendarEpochDay - 365 - getEpochDayDifference();
+        return this.epochDay;
     }
 }

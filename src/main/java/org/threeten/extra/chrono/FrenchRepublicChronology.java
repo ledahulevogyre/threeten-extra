@@ -36,6 +36,7 @@ import java.time.Clock;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.chrono.AbstractChronology;
 import java.time.chrono.ChronoLocalDateTime;
 import java.time.chrono.ChronoZonedDateTime;
 import java.time.chrono.Era;
@@ -46,7 +47,6 @@ import static java.time.temporal.ChronoField.DAY_OF_WEEK;
 import java.time.temporal.TemporalAccessor;
 import java.time.temporal.TemporalField;
 import java.time.temporal.ValueRange;
-import java.time.temporal.WeekFields;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -55,8 +55,8 @@ import java.util.Map;
 
  */
 public final class FrenchRepublicChronology
-        extends AbstractNileChronology
-        implements Serializable {
+    extends AbstractChronology
+    implements Serializable {
 
     /**
      * Singleton instance for the FrenchRepublic chronology.
@@ -69,6 +69,10 @@ public final class FrenchRepublicChronology
     private static final long serialVersionUID = 7291205177830286973L;
 
     /**
+     * Empty range
+     */
+    static final ValueRange EMPTY = ValueRange.of(0, 0);
+    /**
      * Range of days of week.
      */
     static final ValueRange DOW_RANGE = ValueRange.of(1, 10);
@@ -78,11 +82,48 @@ public final class FrenchRepublicChronology
     static final ValueRange ALIGNED_WOM_RANGE = ValueRange.of(1, 1, 3);
 
     /**
+     * Range of proleptic-year.
+     */
+    static final ValueRange YEAR_RANGE = ValueRange.of(-999_998, 999_999);
+    /**
+     * Range of year.
+     */
+    static final ValueRange YOE_RANGE = ValueRange.of(1, 999_999);
+    /**
+     * Range of proleptic month.
+     */
+    static final ValueRange PROLEPTIC_MONTH_RANGE = ValueRange.of(-999_998L * 12, 999_999L * 12L + 11);
+    /**
+     * Range of months.
+     */
+    static final ValueRange MOY_RANGE = ValueRange.of(1, 13);
+    /**
+     * Range of days.
+     */
+    static final ValueRange DOM_RANGE = ValueRange.of(1, 30);
+
+    /**
      * Private constructor, that is public to satisfy the {@code ServiceLoader}.
      * @deprecated Use the singleton {@link #INSTANCE} instead.
      */
     @Deprecated
     public FrenchRepublicChronology() {
+    }
+
+    //-----------------------------------------------------------------------
+    /**
+     * Checks if the specified year is a leap year.
+     * <p>
+     * The proleptic-year is leap if the remainder after division by four equals three.
+     * This method does not validate the year passed in, and only has a
+     * well-defined result for years in the supported range.
+     *
+     * @param prolepticYear  the proleptic-year to check, not validated for range
+     * @return true if the year is a leap year
+     */
+    @Override
+    public boolean isLeapYear(long prolepticYear) {
+        return (prolepticYear & 3) == 3;
     }
 
     /**
@@ -306,12 +347,25 @@ public final class FrenchRepublicChronology
 
     @Override
     public ValueRange range(ChronoField field) {
-        if (field == DAY_OF_WEEK) {
-            return DOW_RANGE;
-        } else if (field == ALIGNED_WEEK_OF_MONTH) {
-            return ALIGNED_WOM_RANGE;
+        switch (field) {
+            case DAY_OF_WEEK:
+                return DOW_RANGE;
+            case DAY_OF_MONTH:
+                return DOM_RANGE;
+            case ALIGNED_WEEK_OF_MONTH:
+                return ALIGNED_WOM_RANGE;
+            case MONTH_OF_YEAR:
+                return MOY_RANGE;
+            case PROLEPTIC_MONTH:
+                return PROLEPTIC_MONTH_RANGE;
+            case YEAR_OF_ERA:
+                return YOE_RANGE;
+            case YEAR:
+                return YEAR_RANGE;
+            default:
+                break;
         }
-        return super.range(field);
+        return field.range();
     }
 
     //-----------------------------------------------------------------------

@@ -54,6 +54,9 @@ import static java.time.temporal.ChronoUnit.MONTHS;
 import static java.time.temporal.ChronoUnit.WEEKS;
 import static java.time.temporal.ChronoUnit.YEARS;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
+import static org.testng.Assert.assertNotNull;
+import static org.testng.Assert.assertTrue;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -63,13 +66,11 @@ import java.time.Period;
 import java.time.chrono.Chronology;
 import java.time.chrono.Era;
 import java.time.chrono.IsoEra;
-import java.time.temporal.IsoFields;
 import java.time.temporal.TemporalAdjusters;
 import java.time.temporal.TemporalField;
 import java.time.temporal.TemporalUnit;
 import java.time.temporal.UnsupportedTemporalTypeException;
 import java.time.temporal.ValueRange;
-import java.time.temporal.WeekFields;
 import java.util.List;
 
 import org.testng.Assert;
@@ -113,7 +114,6 @@ public class TestFrenchRepublicChronology {
             {FrenchRepublicDate.of(1, 1, 2), LocalDate.of(1792, 9, 23)},
             {FrenchRepublicDate.of(1, 1, 3), LocalDate.of(1792, 9, 24)},
             {FrenchRepublicDate.of(1, 1, 30), LocalDate.of(1792, 10, 21)},
-
             {FrenchRepublicDate.of(1, 4, 11), LocalDate.of(1792, 12, 31)},
             {FrenchRepublicDate.of(1, 4, 12), LocalDate.of(1793, 1, 1)},
             {FrenchRepublicDate.of(1, 6, 10), LocalDate.of(1793, 2, 28)},
@@ -203,8 +203,6 @@ public class TestFrenchRepublicChronology {
         assertEquals(FrenchRepublicDate.from(iso), french);
     }
 
-
-
     @Test(dataProvider = "samples")
     public void test_FrenchRepublicDate_chronology_dateEpochDay(FrenchRepublicDate frenchRepublic, LocalDate iso) {
         assertEquals(FrenchRepublicChronology.INSTANCE.dateEpochDay(iso.toEpochDay()), frenchRepublic);
@@ -241,7 +239,7 @@ public class TestFrenchRepublicChronology {
         assertEquals(LocalDate.from(frenchRepublic.plus(1, DAYS)), iso.plusDays(1));
         assertEquals(LocalDate.from(frenchRepublic.plus(35, DAYS)), iso.plusDays(35));
         assertEquals(LocalDate.from(frenchRepublic.plus(-1, DAYS)), iso.plusDays(-1));
-        assertEquals(LocalDate.from(frenchRepublic.plus(-60, DAYS)), iso.plusDays(-60));
+        assertEquals(LocalDate.from(frenchRepublic.plus(-59, DAYS)), iso.plusDays(-59));
     }
 
     @Test(dataProvider = "samples")
@@ -250,7 +248,7 @@ public class TestFrenchRepublicChronology {
         assertEquals(LocalDate.from(frenchRepublic.minus(1, DAYS)), iso.minusDays(1));
         assertEquals(LocalDate.from(frenchRepublic.minus(35, DAYS)), iso.minusDays(35));
         assertEquals(LocalDate.from(frenchRepublic.minus(-1, DAYS)), iso.minusDays(-1));
-        assertEquals(LocalDate.from(frenchRepublic.minus(-60, DAYS)), iso.minusDays(-60));
+        assertEquals(LocalDate.from(frenchRepublic.minus(-57, DAYS)), iso.minusDays(-57));
     }
 
     @Test(dataProvider = "samples")
@@ -369,22 +367,22 @@ public class TestFrenchRepublicChronology {
             {1, 10, 30},
             {1, 11, 30},
             {1, 12, 30},
-            {1, 13, 5},
+            {1, 13, 0},
 
-            {1, 13, 5},
-            {2, 13, 5},
-            {3, 13, 6},
-            {4, 13, 5},
-            {5, 13, 5},
-            {6, 13, 5},
-            {7, 13, 6},
-            {8, 13, 5},
-            {9, 13, 5},
-            {10, 13, 5},
-            {11, 13, 6},
-            {12, 13, 5},
-            {13, 13, 5},
-            {14, 13, 5},
+            {1, 13, 0},
+            {2, 13, 0},
+            {3, 13, 0},
+            {4, 13, 0},
+            {5, 13, 0},
+            {6, 13, 0},
+            {7, 13, 0},
+            {8, 13, 0},
+            {9, 13, 0},
+            {10, 13, 0},
+            {11, 13, 0},
+            {12, 13, 0},
+            {13, 13, 0},
+            {14, 13, 0},
         };
     }
 
@@ -466,7 +464,7 @@ public class TestFrenchRepublicChronology {
     @Test
     public void test_Chronology_range() {
         assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_WEEK), ValueRange.of(1, 10));
-        assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_MONTH), ValueRange.of(1, 5, 30));
+        assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_MONTH), ValueRange.of(1, 30));
         assertEquals(FrenchRepublicChronology.INSTANCE.range(DAY_OF_YEAR), ValueRange.of(1, 365, 366));
         assertEquals(FrenchRepublicChronology.INSTANCE.range(MONTH_OF_YEAR), ValueRange.of(1, 13));
     }
@@ -489,15 +487,15 @@ public class TestFrenchRepublicChronology {
             {1, 10, 23, DAY_OF_MONTH, 1, 30},
             {1, 11, 23, DAY_OF_MONTH, 1, 30},
             {1, 12, 23, DAY_OF_MONTH, 1, 30},
-            {1, 13, 2, DAY_OF_MONTH, 1, 5},
+            {1, 13, 2, DAY_OF_MONTH, 0, 0},
             {1, 1, 23, DAY_OF_YEAR, 1, 365},
             {1, 1, 23, ALIGNED_WEEK_OF_MONTH, 1, 3},
             {1, 12, 23, ALIGNED_WEEK_OF_MONTH, 1, 3},
-            {1, 13, 2, ALIGNED_WEEK_OF_MONTH, 1, 1},
+            {1, 13, 2, ALIGNED_WEEK_OF_MONTH, 0, 0},
 
-            {3, 13, 2, DAY_OF_MONTH, 1, 6},
+            {3, 13, 2, DAY_OF_MONTH, 0, 0},
             {3, 13, 2, DAY_OF_YEAR, 1, 366},
-            {3, 13, 2, ALIGNED_WEEK_OF_MONTH, 1, 1},
+            {3, 13, 2, ALIGNED_WEEK_OF_MONTH, 0, 0},
         };
     }
 
@@ -525,7 +523,7 @@ public class TestFrenchRepublicChronology {
             {1, 6, 8, ALIGNED_DAY_OF_WEEK_IN_YEAR, 8},
             {1, 6, 8, ALIGNED_WEEK_OF_YEAR, 16},
             {1, 6, 8, MONTH_OF_YEAR, 6},
-            {1, 6, 8, PROLEPTIC_MONTH, 13 + 6 - 1},
+            {1, 6, 8, PROLEPTIC_MONTH, 12 + 6 - 1},
             {1, 6, 8, YEAR, 1},
             {1, 6, 8, ERA, 1},
 
@@ -567,13 +565,13 @@ public class TestFrenchRepublicChronology {
             {1, 5, 26, MONTH_OF_YEAR, 7, 1, 7, 26},
             {1, 5, 26, MONTH_OF_YEAR, 5, 1, 5, 26},
 
-            {1, 5, 26, PROLEPTIC_MONTH, 3 * 13 + 3 - 1, 3, 3, 26},
-            {1, 5, 26, PROLEPTIC_MONTH, 4 * 13 + 5 - 1, 4, 5, 26},
+            {1, 5, 26, PROLEPTIC_MONTH, 3 * 12 + 3 - 1, 3, 3, 26},
+            {1, 5, 26, PROLEPTIC_MONTH, 4 * 12 + 5 - 1, 4, 5, 26},
             {1, 5, 26, YEAR, 2, 2, 5, 26},
             {1, 5, 26, YEAR, 3, 3, 5, 26},
             {1, 5, 26, YEAR_OF_ERA, 2, 2, 5, 26},
             {1, 5, 26, YEAR_OF_ERA, 3, 3, 5, 26},
-            //{1, 5, 26, ERA, 0, -1, 5, 26},
+            {1, 5, 26, ERA, 0, 0, 5, 26},
             {1, 5, 26, ERA, 1, 1, 5, 26},
 
             {1, 3, 30, MONTH_OF_YEAR, 13, 1, 13, 5},
@@ -608,9 +606,9 @@ public class TestFrenchRepublicChronology {
 
     @Test
     public void test_adjust2() {
-        FrenchRepublicDate base = FrenchRepublicDate.of(3, 13, 2);
+        FrenchRepublicDate base = FrenchRepublicDate.of(3, 12, 2);
         FrenchRepublicDate test = base.with(TemporalAdjusters.lastDayOfMonth());
-        assertEquals(test, FrenchRepublicDate.of(3, 13, 6));
+        assertEquals(test, FrenchRepublicDate.of(3, 12, 30));
     }
 
     //-----------------------------------------------------------------------
@@ -658,12 +656,14 @@ public class TestFrenchRepublicChronology {
             {1, 5, 26, 0, WEEKS, 1, 5, 26},
             {1, 5, 26, 3, WEEKS, 1, 6, 26},
             {1, 5, 26, -5, WEEKS, 1, 4, 6},
-            {1, 12, 25, 1, WEEKS, 1, 13, 5},
-            //{1, 12, 25, 2, WEEKS, 2, 1, 5},
-            //{1, 12, 25, 3, WEEKS, 2, 2, 5},
+            {1, 12, 25, 1, WEEKS, 2, 1, 5},
+            {1, 12, 25, 2, WEEKS, 2, 1, 15},
+            {1, 12, 25, 3, WEEKS, 2, 1, 25},
+            {1, 13, 5, 72, WEEKS, 3, 13, 5},
             {1, 5, 26, 0, MONTHS, 1, 5, 26},
             {1, 5, 26, 3, MONTHS, 1, 8, 26},
-            {2, 5, 5, -5, MONTHS, 1, 13, 5},
+            {2, 5, 5, -5, MONTHS, 1, 12, 5},
+            {1, 13, 5, 12, MONTHS, 2, 13, 5},
             {1, 5, 26, 0, YEARS, 1, 5, 26},
             {1, 5, 26, 3, YEARS, 4, 5, 26},
             {13, 5, 26, -5, YEARS, 8, 5, 26},
@@ -676,12 +676,13 @@ public class TestFrenchRepublicChronology {
             {1, 5, 26, 0, MILLENNIA, 1, 5, 26},
             {1, 5, 26, 3, MILLENNIA, 3001, 5, 26},
             {5002, 5, 26, -5, MILLENNIA, 5002 - 5000, 5, 26},
-            //{2, 5, 26, -1, ERAS, -1, 5, 26},
+            {2, 5, 26, -1, ERAS, -1, 5, 26},
         };
     }
 
     @Test(dataProvider = "plus")
-    public void test_plus_TemporalUnit(int year, int month, int dom,
+    public void test_plus_TemporalUnit(
+            int year, int month, int dom,
             long amount, TemporalUnit unit,
             int expectedYear, int expectedMonth, int expectedDom) {
         assertEquals(FrenchRepublicDate.of(year, month, dom).plus(amount, unit), FrenchRepublicDate.of(expectedYear, expectedMonth, expectedDom));
@@ -697,7 +698,7 @@ public class TestFrenchRepublicChronology {
 
     @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
     public void test_plus_TemporalUnit_unsupported() {
-        FrenchRepublicDate.of(2012, 6, 30).plus(0, MINUTES);
+        FrenchRepublicDate.of(2012, 6, 30).plus(1, MINUTES);
     }
 
     //-----------------------------------------------------------------------
@@ -783,14 +784,15 @@ public class TestFrenchRepublicChronology {
         FrenchRepublicDate c = FrenchRepublicDate.of(1, 2, 3);
         FrenchRepublicDate d = FrenchRepublicDate.of(2, 1, 3);
 
-        assertEquals(a1.equals(a1), true);
-        assertEquals(a1.equals(a2), true);
-        assertEquals(a1.equals(b), false);
-        assertEquals(a1.equals(c), false);
-        assertEquals(a1.equals(d), false);
+        assertNotNull(a1);
+        assertTrue(a1.equals(a1));
+        assertTrue(a1.equals(a2));
+        assertFalse(a1.equals(b));
+        assertFalse(a1.equals(c));
+        assertFalse(a1.equals(d));
 
-        assertEquals(a1.equals(null), false);
-        assertEquals(a1.equals(""), false);
+        assertFalse(a1.equals(null));
+        assertFalse(a1.equals(""));
 
         assertEquals(a1.hashCode(), a2.hashCode());
     }
@@ -803,6 +805,7 @@ public class TestFrenchRepublicChronology {
         return new Object[][] {
             {FrenchRepublicDate.of(1, 1, 1), "French Republican REPUBLICAN 1-01-01"},
             {FrenchRepublicDate.of(14, 13, 5), "French Republican REPUBLICAN 14-13-05"},
+            {FrenchRepublicDate.of(0, 5, 5), "French Republican BEFORE_REPUBLICAN 1-05-05"},
         };
     }
 
