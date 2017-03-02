@@ -69,6 +69,10 @@ public final class FrenchRepublicChronology
     private static final long serialVersionUID = 7291205177830286973L;
 
     /**
+     * Empty range
+     */
+    static final ValueRange EMPTY = ValueRange.of(0, 0);
+    /**
      * Range of days of week.
      */
     static final ValueRange DOW_RANGE = ValueRange.of(1, 10);
