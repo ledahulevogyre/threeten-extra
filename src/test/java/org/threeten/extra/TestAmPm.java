@@ -62,8 +62,10 @@ import static java.time.temporal.ChronoField.SECOND_OF_MINUTE;
 import static java.time.temporal.ChronoField.YEAR;
 import static java.time.temporal.ChronoField.YEAR_OF_ERA;
 import static java.time.temporal.ChronoUnit.HALF_DAYS;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Serializable;
 import java.time.DateTimeException;
@@ -75,18 +77,12 @@ import java.time.temporal.TemporalQueries;
 import java.time.temporal.UnsupportedTemporalTypeException;
 import java.util.Locale;
 
-import org.testng.annotations.BeforeMethod;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test AmPm.
  */
-@Test
 public class TestAmPm {
-
-    @BeforeMethod
-    public void setUp() {
-    }
 
     //-----------------------------------------------------------------------
     @Test
@@ -104,18 +100,18 @@ public class TestAmPm {
     public void test_of_int_singleton_equals() {
         for (int i = 0; i <= 1; i++) {
             AmPm test = AmPm.of(i);
-            assertEquals(test.getValue(), i);
+            assertEquals(i, test.getValue());
         }
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_of_int_valueTooLow() {
-        AmPm.of(-1);
+        assertThrows(DateTimeException.class, () -> AmPm.of(-1));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_of_int_valueTooHigh() {
-        AmPm.of(2);
+        assertThrows(DateTimeException.class, () -> AmPm.of(2));
     }
 
     //-----------------------------------------------------------------------
@@ -124,21 +120,21 @@ public class TestAmPm {
     @Test
     public void test_ofHour_int_singleton() {
         for (int i = 0; i < 12; i++) {
-            assertEquals(AmPm.ofHour(i), AmPm.AM);
+            assertSame(AmPm.AM, AmPm.ofHour(i));
         }
         for (int i = 12; i < 24; i++) {
-            assertEquals(AmPm.ofHour(i), AmPm.PM);
+        	assertSame(AmPm.PM, AmPm.ofHour(i));
         }
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_ofHour_int_valueTooLow() {
-        AmPm.ofHour(-1);
+        assertThrows(DateTimeException.class, () -> AmPm.ofHour(-1));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_ofHour_int_valueTooHigh() {
-        AmPm.ofHour(24);
+        assertThrows(DateTimeException.class, () -> AmPm.ofHour(24));
     }
 
     //-----------------------------------------------------------------------
@@ -146,18 +142,18 @@ public class TestAmPm {
     //-----------------------------------------------------------------------
     @Test
     public void test_from_TemporalAccessor() {
-        assertEquals(AmPm.from(LocalTime.of(8, 30)), AmPm.AM);
-        assertEquals(AmPm.from(LocalTime.of(17, 30)), AmPm.PM);
+        assertEquals(AmPm.AM, AmPm.from(LocalTime.of(8, 30)));
+        assertEquals(AmPm.PM, AmPm.from(LocalTime.of(17, 30)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_from_TemporalAccessor_invalid_noDerive() {
-        AmPm.from(LocalDate.of(2007, 7, 30));
+        assertThrows(DateTimeException.class, () -> AmPm.from(LocalDate.of(2007, 7, 30)));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_from_TemporalAccessor_null() {
-        AmPm.from((TemporalAccessor) null);
+        assertThrows(NullPointerException.class, () -> AmPm.from((TemporalAccessor) null));
     }
 
     //-----------------------------------------------------------------------
@@ -165,108 +161,112 @@ public class TestAmPm {
     //-----------------------------------------------------------------------
     @Test
     public void test_getDisplayName() {
-        assertEquals(AmPm.AM.getDisplayName(TextStyle.SHORT, Locale.US), "AM");
+        assertEquals("AM", AmPm.AM.getDisplayName(TextStyle.SHORT, Locale.US));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_getDisplayName_nullStyle() {
-        AmPm.AM.getDisplayName(null, Locale.US);
+        assertThrows(NullPointerException.class, () -> AmPm.AM.getDisplayName(null, Locale.US));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_getDisplayName_nullLocale() {
-        AmPm.AM.getDisplayName(TextStyle.FULL, null);
+        assertThrows(NullPointerException.class, () -> AmPm.AM.getDisplayName(TextStyle.FULL, null));
     }
 
     //-----------------------------------------------------------------------
     // isSupported()
     //-----------------------------------------------------------------------
+    @Test
     public void test_isSupported() {
         AmPm test = AmPm.AM;
-        assertEquals(test.isSupported(null), false);
-        assertEquals(test.isSupported(NANO_OF_SECOND), false);
-        assertEquals(test.isSupported(NANO_OF_DAY), false);
-        assertEquals(test.isSupported(MICRO_OF_SECOND), false);
-        assertEquals(test.isSupported(MICRO_OF_DAY), false);
-        assertEquals(test.isSupported(MILLI_OF_SECOND), false);
-        assertEquals(test.isSupported(MILLI_OF_DAY), false);
-        assertEquals(test.isSupported(SECOND_OF_MINUTE), false);
-        assertEquals(test.isSupported(SECOND_OF_DAY), false);
-        assertEquals(test.isSupported(MINUTE_OF_HOUR), false);
-        assertEquals(test.isSupported(MINUTE_OF_DAY), false);
-        assertEquals(test.isSupported(HOUR_OF_AMPM), false);
-        assertEquals(test.isSupported(CLOCK_HOUR_OF_AMPM), false);
-        assertEquals(test.isSupported(HOUR_OF_DAY), false);
-        assertEquals(test.isSupported(CLOCK_HOUR_OF_DAY), false);
-        assertEquals(test.isSupported(AMPM_OF_DAY), true);
-        assertEquals(test.isSupported(DAY_OF_WEEK), false);
-        assertEquals(test.isSupported(ALIGNED_DAY_OF_WEEK_IN_MONTH), false);
-        assertEquals(test.isSupported(ALIGNED_DAY_OF_WEEK_IN_YEAR), false);
-        assertEquals(test.isSupported(DAY_OF_MONTH), false);
-        assertEquals(test.isSupported(DAY_OF_YEAR), false);
-        assertEquals(test.isSupported(EPOCH_DAY), false);
-        assertEquals(test.isSupported(ALIGNED_WEEK_OF_MONTH), false);
-        assertEquals(test.isSupported(ALIGNED_WEEK_OF_YEAR), false);
-        assertEquals(test.isSupported(MONTH_OF_YEAR), false);
-        assertEquals(test.isSupported(PROLEPTIC_MONTH), false);
-        assertEquals(test.isSupported(YEAR_OF_ERA), false);
-        assertEquals(test.isSupported(YEAR), false);
-        assertEquals(test.isSupported(ERA), false);
-        assertEquals(test.isSupported(INSTANT_SECONDS), false);
-        assertEquals(test.isSupported(OFFSET_SECONDS), false);
+        assertEquals(false, test.isSupported(null));
+        assertEquals(false, test.isSupported(NANO_OF_SECOND));
+        assertEquals(false, test.isSupported(NANO_OF_DAY));
+        assertEquals(false, test.isSupported(MICRO_OF_SECOND));
+        assertEquals(false, test.isSupported(MICRO_OF_DAY));
+        assertEquals(false, test.isSupported(MILLI_OF_SECOND));
+        assertEquals(false, test.isSupported(MILLI_OF_DAY));
+        assertEquals(false, test.isSupported(SECOND_OF_MINUTE));
+        assertEquals(false, test.isSupported(SECOND_OF_DAY));
+        assertEquals(false, test.isSupported(MINUTE_OF_HOUR));
+        assertEquals(false, test.isSupported(MINUTE_OF_DAY));
+        assertEquals(false, test.isSupported(HOUR_OF_AMPM));
+        assertEquals(false, test.isSupported(CLOCK_HOUR_OF_AMPM));
+        assertEquals(false, test.isSupported(HOUR_OF_DAY));
+        assertEquals(false, test.isSupported(CLOCK_HOUR_OF_DAY));
+        assertEquals(true, test.isSupported(AMPM_OF_DAY));
+        assertEquals(false, test.isSupported(DAY_OF_WEEK));
+        assertEquals(false, test.isSupported(ALIGNED_DAY_OF_WEEK_IN_MONTH));
+        assertEquals(false, test.isSupported(ALIGNED_DAY_OF_WEEK_IN_YEAR));
+        assertEquals(false, test.isSupported(DAY_OF_MONTH));
+        assertEquals(false, test.isSupported(DAY_OF_YEAR));
+        assertEquals(false, test.isSupported(EPOCH_DAY));
+        assertEquals(false, test.isSupported(ALIGNED_WEEK_OF_MONTH));
+        assertEquals(false, test.isSupported(ALIGNED_WEEK_OF_YEAR));
+        assertEquals(false, test.isSupported(MONTH_OF_YEAR));
+        assertEquals(false, test.isSupported(PROLEPTIC_MONTH));
+        assertEquals(false, test.isSupported(YEAR_OF_ERA));
+        assertEquals(false, test.isSupported(YEAR));
+        assertEquals(false, test.isSupported(ERA));
+        assertEquals(false, test.isSupported(INSTANT_SECONDS));
+        assertEquals(false, test.isSupported(OFFSET_SECONDS));
     }
 
     //-----------------------------------------------------------------------
     // range()
     //-----------------------------------------------------------------------
+    @Test
     public void test_range() {
-        assertEquals(AmPm.AM.range(AMPM_OF_DAY), AMPM_OF_DAY.range());
+        assertEquals(AMPM_OF_DAY.range(), AmPm.AM.range(AMPM_OF_DAY));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_range_invalidField() {
-        AmPm.AM.range(MONTH_OF_YEAR);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> AmPm.AM.range(MONTH_OF_YEAR));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_range_null() {
-        AmPm.AM.range(null);
+        assertThrows(NullPointerException.class, () -> AmPm.AM.range(null));
     }
 
     //-----------------------------------------------------------------------
     // get()
     //-----------------------------------------------------------------------
+    @Test
     public void test_get() {
-        assertEquals(AmPm.AM.get(AMPM_OF_DAY), 0);
-        assertEquals(AmPm.PM.get(AMPM_OF_DAY), 1);
+        assertEquals(0, AmPm.AM.get(AMPM_OF_DAY));
+        assertEquals(1, AmPm.PM.get(AMPM_OF_DAY));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_get_invalidField() {
-        AmPm.PM.get(MONTH_OF_YEAR);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> AmPm.PM.get(MONTH_OF_YEAR));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_get_null() {
-        AmPm.PM.get(null);
+        assertThrows(NullPointerException.class, () -> AmPm.PM.get(null));
     }
 
     //-----------------------------------------------------------------------
     // getLong()
     //-----------------------------------------------------------------------
+    @Test
     public void test_getLong() {
-        assertEquals(AmPm.AM.getLong(AMPM_OF_DAY), 0);
-        assertEquals(AmPm.PM.getLong(AMPM_OF_DAY), 1);
+        assertEquals(0, AmPm.AM.getLong(AMPM_OF_DAY));
+        assertEquals(1, AmPm.PM.getLong(AMPM_OF_DAY));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_getLong_invalidField() {
-        AmPm.PM.getLong(MONTH_OF_YEAR);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> AmPm.PM.getLong(MONTH_OF_YEAR));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_getLong_null() {
-        AmPm.PM.getLong(null);
+        assertThrows(NullPointerException.class, () -> AmPm.PM.getLong(null));
     }
 
     //-----------------------------------------------------------------------
@@ -274,13 +274,13 @@ public class TestAmPm {
     //-----------------------------------------------------------------------
     @Test
     public void test_query() {
-        assertEquals(AmPm.AM.query(TemporalQueries.chronology()), null);
-        assertEquals(AmPm.AM.query(TemporalQueries.localDate()), null);
-        assertEquals(AmPm.AM.query(TemporalQueries.localTime()), null);
-        assertEquals(AmPm.AM.query(TemporalQueries.offset()), null);
-        assertEquals(AmPm.AM.query(TemporalQueries.precision()), HALF_DAYS);
-        assertEquals(AmPm.AM.query(TemporalQueries.zone()), null);
-        assertEquals(AmPm.AM.query(TemporalQueries.zoneId()), null);
+        assertEquals(null, AmPm.AM.query(TemporalQueries.chronology()));
+        assertEquals(null, AmPm.AM.query(TemporalQueries.localDate()));
+        assertEquals(null, AmPm.AM.query(TemporalQueries.localTime()));
+        assertEquals(null, AmPm.AM.query(TemporalQueries.offset()));
+        assertEquals(HALF_DAYS, AmPm.AM.query(TemporalQueries.precision()));
+        assertEquals(null, AmPm.AM.query(TemporalQueries.zone()));
+        assertEquals(null, AmPm.AM.query(TemporalQueries.zoneId()));
     }
 
     //-----------------------------------------------------------------------
@@ -288,8 +288,8 @@ public class TestAmPm {
     //-----------------------------------------------------------------------
     @Test
     public void test_toString() {
-        assertEquals(AmPm.AM.toString(), "AM");
-        assertEquals(AmPm.PM.toString(), "PM");
+        assertEquals("AM", AmPm.AM.toString());
+        assertEquals("PM", AmPm.PM.toString());
     }
 
     //-----------------------------------------------------------------------
@@ -297,8 +297,8 @@ public class TestAmPm {
     //-----------------------------------------------------------------------
     @Test
     public void test_enum() {
-        assertEquals(AmPm.valueOf("AM"), AmPm.AM);
-        assertEquals(AmPm.values()[0], AmPm.AM);
+        assertEquals(AmPm.AM, AmPm.valueOf("AM"));
+        assertEquals(AmPm.AM, AmPm.values()[0]);
     }
 
 }

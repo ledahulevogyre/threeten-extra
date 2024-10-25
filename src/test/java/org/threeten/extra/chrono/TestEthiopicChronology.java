@@ -53,7 +53,9 @@ import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.time.temporal.ChronoUnit.MONTHS;
 import static java.time.temporal.ChronoUnit.WEEKS;
 import static java.time.temporal.ChronoUnit.YEARS;
-import static org.testng.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -70,14 +72,15 @@ import java.time.temporal.ValueRange;
 import java.time.temporal.WeekFields;
 import java.util.List;
 
-import org.testng.Assert;
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.testing.EqualsTester;
 
 /**
  * Test.
  */
-@Test
 public class TestEthiopicChronology {
 
     //-----------------------------------------------------------------------
@@ -86,26 +89,25 @@ public class TestEthiopicChronology {
     @Test
     public void test_chronology_of_name() {
         Chronology chrono = Chronology.of("Ethiopic");
-        Assert.assertNotNull(chrono);
-        Assert.assertEquals(chrono, EthiopicChronology.INSTANCE);
-        Assert.assertEquals(chrono.getId(), "Ethiopic");
-        Assert.assertEquals(chrono.getCalendarType(), "ethiopic");
+        assertNotNull(chrono);
+        assertEquals(EthiopicChronology.INSTANCE, chrono);
+        assertEquals("Ethiopic", chrono.getId());
+        assertEquals("ethiopic", chrono.getCalendarType());
     }
 
     @Test
     public void test_chronology_of_name_id() {
         Chronology chrono = Chronology.of("ethiopic");
-        Assert.assertNotNull(chrono);
-        Assert.assertEquals(chrono, EthiopicChronology.INSTANCE);
-        Assert.assertEquals(chrono.getId(), "Ethiopic");
-        Assert.assertEquals(chrono.getCalendarType(), "ethiopic");
+        assertNotNull(chrono);
+        assertEquals(EthiopicChronology.INSTANCE, chrono);
+        assertEquals("Ethiopic", chrono.getId());
+        assertEquals("ethiopic", chrono.getCalendarType());
     }
 
     //-----------------------------------------------------------------------
     // creation, toLocalDate()
     //-----------------------------------------------------------------------
-    @DataProvider(name = "samples")
-    Object[][] data_samples() {
+    public static Object[][] data_samples() {
         return new Object[][] {
             {EthiopicDate.of(-1, 13, 6), LocalDate.of(7, 8, 27)},
             {EthiopicDate.of(0, 1, 1), LocalDate.of(7, 8, 28)},
@@ -133,74 +135,84 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_LocalDate_from_EthiopicDate(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(LocalDate.from(ethiopic), iso);
+        assertEquals(iso, LocalDate.from(ethiopic));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_EthiopicDate_from_LocalDate(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(EthiopicDate.from(iso), ethiopic);
+        assertEquals(ethiopic, EthiopicDate.from(iso));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_EthiopicDate_chronology_dateEpochDay(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(EthiopicChronology.INSTANCE.dateEpochDay(iso.toEpochDay()), ethiopic);
+        assertEquals(ethiopic, EthiopicChronology.INSTANCE.dateEpochDay(iso.toEpochDay()));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_EthiopicDate_toEpochDay(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(ethiopic.toEpochDay(), iso.toEpochDay());
+        assertEquals(iso.toEpochDay(), ethiopic.toEpochDay());
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_EthiopicDate_until_EthiopicDate(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(ethiopic.until(ethiopic), EthiopicChronology.INSTANCE.period(0, 0, 0));
+        assertEquals(EthiopicChronology.INSTANCE.period(0, 0, 0), ethiopic.until(ethiopic));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_EthiopicDate_until_LocalDate(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(ethiopic.until(iso), EthiopicChronology.INSTANCE.period(0, 0, 0));
+        assertEquals(EthiopicChronology.INSTANCE.period(0, 0, 0), ethiopic.until(iso));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_LocalDate_until_EthiopicDate(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(iso.until(ethiopic), Period.ZERO);
+        assertEquals(Period.ZERO, iso.until(ethiopic));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_Chronology_date_Temporal(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(EthiopicChronology.INSTANCE.date(iso), ethiopic);
+        assertEquals(ethiopic, EthiopicChronology.INSTANCE.date(iso));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_plusDays(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(LocalDate.from(ethiopic.plus(0, DAYS)), iso);
-        assertEquals(LocalDate.from(ethiopic.plus(1, DAYS)), iso.plusDays(1));
-        assertEquals(LocalDate.from(ethiopic.plus(35, DAYS)), iso.plusDays(35));
-        assertEquals(LocalDate.from(ethiopic.plus(-1, DAYS)), iso.plusDays(-1));
-        assertEquals(LocalDate.from(ethiopic.plus(-60, DAYS)), iso.plusDays(-60));
+        assertEquals(iso, LocalDate.from(ethiopic.plus(0, DAYS)));
+        assertEquals(iso.plusDays(1), LocalDate.from(ethiopic.plus(1, DAYS)));
+        assertEquals(iso.plusDays(35), LocalDate.from(ethiopic.plus(35, DAYS)));
+        assertEquals(iso.plusDays(-1), LocalDate.from(ethiopic.plus(-1, DAYS)));
+        assertEquals(iso.plusDays(-60), LocalDate.from(ethiopic.plus(-60, DAYS)));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_minusDays(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(LocalDate.from(ethiopic.minus(0, DAYS)), iso);
-        assertEquals(LocalDate.from(ethiopic.minus(1, DAYS)), iso.minusDays(1));
-        assertEquals(LocalDate.from(ethiopic.minus(35, DAYS)), iso.minusDays(35));
-        assertEquals(LocalDate.from(ethiopic.minus(-1, DAYS)), iso.minusDays(-1));
-        assertEquals(LocalDate.from(ethiopic.minus(-60, DAYS)), iso.minusDays(-60));
+        assertEquals(iso, LocalDate.from(ethiopic.minus(0, DAYS)));
+        assertEquals(iso.minusDays(1), LocalDate.from(ethiopic.minus(1, DAYS)));
+        assertEquals(iso.minusDays(35), LocalDate.from(ethiopic.minus(35, DAYS)));
+        assertEquals(iso.minusDays(-1), LocalDate.from(ethiopic.minus(-1, DAYS)));
+        assertEquals(iso.minusDays(-60), LocalDate.from(ethiopic.minus(-60, DAYS)));
     }
 
-    @Test(dataProvider = "samples")
+    @ParameterizedTest
+    @MethodSource("data_samples")
     public void test_until_DAYS(EthiopicDate ethiopic, LocalDate iso) {
-        assertEquals(ethiopic.until(iso.plusDays(0), DAYS), 0);
-        assertEquals(ethiopic.until(iso.plusDays(1), DAYS), 1);
-        assertEquals(ethiopic.until(iso.plusDays(35), DAYS), 35);
-        assertEquals(ethiopic.until(iso.minusDays(40), DAYS), -40);
+        assertEquals(0, ethiopic.until(iso.plusDays(0), DAYS));
+        assertEquals(1, ethiopic.until(iso.plusDays(1), DAYS));
+        assertEquals(35, ethiopic.until(iso.plusDays(35), DAYS));
+        assertEquals(-40, ethiopic.until(iso.minusDays(40), DAYS));
     }
 
-    @DataProvider(name = "badDates")
-    Object[][] data_badDates() {
+    public static Object[][] data_badDates() {
         return new Object[][] {
             {2008, 0, 0},
 
@@ -231,14 +243,15 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "badDates", expectedExceptions = DateTimeException.class)
+    @ParameterizedTest
+    @MethodSource("data_badDates")
     public void test_badDates(int year, int month, int dom) {
-        EthiopicDate.of(year, month, dom);
+        assertThrows(DateTimeException.class, () -> EthiopicDate.of(year, month, dom));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_chronology_dateYearDay_badDate() {
-        EthiopicChronology.INSTANCE.dateYearDay(2008, 366);
+        assertThrows(DateTimeException.class, () -> EthiopicChronology.INSTANCE.dateYearDay(2008, 366));
     }
 
     //-----------------------------------------------------------------------
@@ -248,32 +261,31 @@ public class TestEthiopicChronology {
     public void test_isLeapYear_loop() {
         for (int year = -200; year < 200; year++) {
             EthiopicDate base = EthiopicDate.of(year, 1, 1);
-            assertEquals(base.isLeapYear(), ((year - 3) % 4) == 0);
-            assertEquals(EthiopicChronology.INSTANCE.isLeapYear(year), ((year + 400 - 3) % 4) == 0);
+            assertEquals(((year - 3) % 4) == 0, base.isLeapYear());
+            assertEquals(((year + 400 - 3) % 4) == 0, EthiopicChronology.INSTANCE.isLeapYear(year));
         }
     }
 
     @Test
     public void test_isLeapYear_specific() {
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(8), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(7), true);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(6), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(5), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(4), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(3), true);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(2), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(1), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(0), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-1), true);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-2), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-3), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-4), false);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-5), true);
-        assertEquals(EthiopicChronology.INSTANCE.isLeapYear(-6), false);
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(8));
+        assertEquals(true, EthiopicChronology.INSTANCE.isLeapYear(7));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(6));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(5));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(4));
+        assertEquals(true, EthiopicChronology.INSTANCE.isLeapYear(3));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(2));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(1));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(0));
+        assertEquals(true, EthiopicChronology.INSTANCE.isLeapYear(-1));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(-2));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(-3));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(-4));
+        assertEquals(true, EthiopicChronology.INSTANCE.isLeapYear(-5));
+        assertEquals(false, EthiopicChronology.INSTANCE.isLeapYear(-6));
     }
 
-    @DataProvider(name = "lengthOfMonth")
-    Object[][] data_lengthOfMonth() {
+    public static Object[][] data_lengthOfMonth() {
         return new Object[][] {
             {2006, 1, 30},
             {2006, 2, 30},
@@ -292,9 +304,10 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "lengthOfMonth")
+    @ParameterizedTest
+    @MethodSource("data_lengthOfMonth")
     public void test_lengthOfMonth(int year, int month, int length) {
-        assertEquals(EthiopicDate.of(year, month, 1).lengthOfMonth(), length);
+        assertEquals(length, EthiopicDate.of(year, month, 1).lengthOfMonth());
     }
 
     //-----------------------------------------------------------------------
@@ -310,7 +323,7 @@ public class TestEthiopicChronology {
             int yoe = (year <= 0 ? 1 - year : year);
             assertEquals(yoe, base.get(YEAR_OF_ERA));
             EthiopicDate eraBased = EthiopicChronology.INSTANCE.date(era, yoe, 1, 1);
-            assertEquals(eraBased, base);
+            assertEquals(base, eraBased);
         }
     }
 
@@ -324,39 +337,39 @@ public class TestEthiopicChronology {
             int yoe = (year <= 0 ? 1 - year : year);
             assertEquals(yoe, base.get(YEAR_OF_ERA));
             EthiopicDate eraBased = EthiopicChronology.INSTANCE.dateYearDay(era, yoe, 1);
-            assertEquals(eraBased, base);
+            assertEquals(base, eraBased);
         }
     }
 
     @Test
     public void test_prolepticYear_specific() {
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 4), 4);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 3), 3);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 2), 2);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 1), 1);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 1), 0);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 2), -1);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 3), -2);
-        assertEquals(EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 4), -3);
+        assertEquals(4, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 4));
+        assertEquals(3, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 3));
+        assertEquals(2, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 2));
+        assertEquals(1, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.INCARNATION, 1));
+        assertEquals(0, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 1));
+        assertEquals(-1, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 2));
+        assertEquals(-2, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 3));
+        assertEquals(-3, EthiopicChronology.INSTANCE.prolepticYear(EthiopicEra.BEFORE_INCARNATION, 4));
     }
 
     @Test
     public void test_Chronology_eraOf() {
-        assertEquals(EthiopicChronology.INSTANCE.eraOf(1), EthiopicEra.INCARNATION);
-        assertEquals(EthiopicChronology.INSTANCE.eraOf(0), EthiopicEra.BEFORE_INCARNATION);
+        assertEquals(EthiopicEra.INCARNATION, EthiopicChronology.INSTANCE.eraOf(1));
+        assertEquals(EthiopicEra.BEFORE_INCARNATION, EthiopicChronology.INSTANCE.eraOf(0));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_Chronology_eraOf_invalid() {
-        EthiopicChronology.INSTANCE.eraOf(2);
+        assertThrows(DateTimeException.class, () -> EthiopicChronology.INSTANCE.eraOf(2));
     }
 
     @Test
     public void test_Chronology_eras() {
         List<Era> eras = EthiopicChronology.INSTANCE.eras();
-        assertEquals(eras.size(), 2);
-        assertEquals(eras.contains(EthiopicEra.BEFORE_INCARNATION), true);
-        assertEquals(eras.contains(EthiopicEra.INCARNATION), true);
+        assertEquals(2, eras.size());
+        assertEquals(true, eras.contains(EthiopicEra.BEFORE_INCARNATION));
+        assertEquals(true, eras.contains(EthiopicEra.INCARNATION));
     }
 
     //-----------------------------------------------------------------------
@@ -364,17 +377,16 @@ public class TestEthiopicChronology {
     //-----------------------------------------------------------------------
     @Test
     public void test_Chronology_range() {
-        assertEquals(EthiopicChronology.INSTANCE.range(DAY_OF_WEEK), ValueRange.of(1, 7));
-        assertEquals(EthiopicChronology.INSTANCE.range(DAY_OF_MONTH), ValueRange.of(1, 5, 30));
-        assertEquals(EthiopicChronology.INSTANCE.range(DAY_OF_YEAR), ValueRange.of(1, 365, 366));
-        assertEquals(EthiopicChronology.INSTANCE.range(MONTH_OF_YEAR), ValueRange.of(1, 13));
+        assertEquals(ValueRange.of(1, 7), EthiopicChronology.INSTANCE.range(DAY_OF_WEEK));
+        assertEquals(ValueRange.of(1, 5, 30), EthiopicChronology.INSTANCE.range(DAY_OF_MONTH));
+        assertEquals(ValueRange.of(1, 365, 366), EthiopicChronology.INSTANCE.range(DAY_OF_YEAR));
+        assertEquals(ValueRange.of(1, 13), EthiopicChronology.INSTANCE.range(MONTH_OF_YEAR));
     }
 
     //-----------------------------------------------------------------------
     // EthiopicDate.range
     //-----------------------------------------------------------------------
-    @DataProvider(name = "ranges")
-    Object[][] data_ranges() {
+    public static Object[][] data_ranges() {
         return new Object[][] {
             {2007, 1, 23, DAY_OF_MONTH, 1, 30},
             {2007, 2, 23, DAY_OF_MONTH, 1, 30},
@@ -402,21 +414,21 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "ranges")
+    @ParameterizedTest
+    @MethodSource("data_ranges")
     public void test_range(int year, int month, int dom, TemporalField field, int expectedMin, int expectedMax) {
-        assertEquals(EthiopicDate.of(year, month, dom).range(field), ValueRange.of(expectedMin, expectedMax));
+        assertEquals(ValueRange.of(expectedMin, expectedMax), EthiopicDate.of(year, month, dom).range(field));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_range_unsupported() {
-        EthiopicDate.of(2007, 6, 30).range(MINUTE_OF_DAY);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> EthiopicDate.of(2007, 6, 30).range(MINUTE_OF_DAY));
     }
 
     //-----------------------------------------------------------------------
     // EthiopicDate.getLong
     //-----------------------------------------------------------------------
-    @DataProvider(name = "getLong")
-    Object[][] data_getLong() {
+    public static Object[][] data_getLong() {
         return new Object[][] {
             {2007, 6, 8, DAY_OF_WEEK, 7},
             {2007, 6, 8, DAY_OF_MONTH, 8},
@@ -436,21 +448,21 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "getLong")
+    @ParameterizedTest
+    @MethodSource("data_getLong")
     public void test_getLong(int year, int month, int dom, TemporalField field, long expected) {
-        assertEquals(EthiopicDate.of(year, month, dom).getLong(field), expected);
+        assertEquals(expected, EthiopicDate.of(year, month, dom).getLong(field));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_getLong_unsupported() {
-        EthiopicDate.of(2007, 6, 30).getLong(MINUTE_OF_DAY);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> EthiopicDate.of(2007, 6, 30).getLong(MINUTE_OF_DAY));
     }
 
     //-----------------------------------------------------------------------
     // EthiopicDate.with
     //-----------------------------------------------------------------------
-    @DataProvider(name = "with")
-    Object[][] data_with() {
+    public static Object[][] data_with() {
         return new Object[][] {
             {2007, 6, 8, DAY_OF_WEEK, 3, 2007, 6, 4},
             {2007, 6, 8, DAY_OF_WEEK, 7, 2007, 6, 8},
@@ -488,15 +500,15 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "with")
+    @ParameterizedTest
+    @MethodSource("data_with")
     public void test_with_TemporalField(int year, int month, int dom,
             TemporalField field, long value,
             int expectedYear, int expectedMonth, int expectedDom) {
-        assertEquals(EthiopicDate.of(year, month, dom).with(field, value), EthiopicDate.of(expectedYear, expectedMonth, expectedDom));
+        assertEquals(EthiopicDate.of(expectedYear, expectedMonth, expectedDom), EthiopicDate.of(year, month, dom).with(field, value));
     }
 
-    @DataProvider(name = "withBad")
-    Object[][] data_with_bad() {
+    public static Object[][] data_with_bad() {
         return new Object[][] {
             {2007, 6, 8, DAY_OF_WEEK, 0},
             {2007, 6, 8, DAY_OF_WEEK, 8},
@@ -510,14 +522,15 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "withBad", expectedExceptions = DateTimeException.class)
+    @ParameterizedTest
+    @MethodSource("data_with_bad")
     public void test_with_TemporalField_badValue(int year, int month, int dom, TemporalField field, long value) {
-        EthiopicDate.of(year, month, dom).with(field, value);
+        assertThrows(DateTimeException.class, () -> EthiopicDate.of(year, month, dom).with(field, value));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_with_TemporalField_unsupported() {
-        EthiopicDate.of(2006, 6, 30).with(MINUTE_OF_DAY, 0);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> EthiopicDate.of(2006, 6, 30).with(MINUTE_OF_DAY, 0));
     }
 
     //-----------------------------------------------------------------------
@@ -527,14 +540,14 @@ public class TestEthiopicChronology {
     public void test_adjust1() {
         EthiopicDate base = EthiopicDate.of(2005, 10, 29);
         EthiopicDate test = base.with(TemporalAdjusters.lastDayOfMonth());
-        assertEquals(test, EthiopicDate.of(2005, 10, 30));
+        assertEquals(EthiopicDate.of(2005, 10, 30), test);
     }
 
     @Test
     public void test_adjust2() {
         EthiopicDate base = EthiopicDate.of(2005, 13, 2);
         EthiopicDate test = base.with(TemporalAdjusters.lastDayOfMonth());
-        assertEquals(test, EthiopicDate.of(2005, 13, 5));
+        assertEquals(EthiopicDate.of(2005, 13, 5), test);
     }
 
     //-----------------------------------------------------------------------
@@ -544,13 +557,13 @@ public class TestEthiopicChronology {
     public void test_adjust_toLocalDate() {
         EthiopicDate ethiopic = EthiopicDate.of(2001, 1, 4);
         EthiopicDate test = ethiopic.with(LocalDate.of(2011, 10, 16));
-        assertEquals(test, EthiopicDate.of(2004, 2, 5));
+        assertEquals(EthiopicDate.of(2004, 2, 5), test);
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_adjust_toMonth() {
         EthiopicDate ethiopic = EthiopicDate.of(2004, 1, 4);
-        ethiopic.with(Month.APRIL);
+        assertThrows(DateTimeException.class, () -> ethiopic.with(Month.APRIL));
     }
 
     //-----------------------------------------------------------------------
@@ -560,21 +573,20 @@ public class TestEthiopicChronology {
     public void test_LocalDate_adjustToEthiopicDate() {
         EthiopicDate ethiopic = EthiopicDate.of(2004, 2, 5);
         LocalDate test = LocalDate.MIN.with(ethiopic);
-        assertEquals(test, LocalDate.of(2011, 10, 16));
+        assertEquals(LocalDate.of(2011, 10, 16), test);
     }
 
     @Test
     public void test_LocalDateTime_adjustToEthiopicDate() {
         EthiopicDate ethiopic = EthiopicDate.of(2004, 2, 5);
         LocalDateTime test = LocalDateTime.MIN.with(ethiopic);
-        assertEquals(test, LocalDateTime.of(2011, 10, 16, 0, 0));
+        assertEquals(LocalDateTime.of(2011, 10, 16, 0, 0), test);
     }
 
     //-----------------------------------------------------------------------
     // EthiopicDate.plus
     //-----------------------------------------------------------------------
-    @DataProvider(name = "plus")
-    Object[][] data_plus() {
+    public static Object[][] data_plus() {
         return new Object[][] {
             {2006, 5, 26, 0, DAYS, 2006, 5, 26},
             {2006, 5, 26, 8, DAYS, 2006, 6, 4},
@@ -601,52 +613,53 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "plus")
+    @ParameterizedTest
+    @MethodSource("data_plus")
     public void test_plus_TemporalUnit(int year, int month, int dom,
             long amount, TemporalUnit unit,
             int expectedYear, int expectedMonth, int expectedDom) {
-        assertEquals(EthiopicDate.of(year, month, dom).plus(amount, unit), EthiopicDate.of(expectedYear, expectedMonth, expectedDom));
+        assertEquals(EthiopicDate.of(expectedYear, expectedMonth, expectedDom), EthiopicDate.of(year, month, dom).plus(amount, unit));
     }
 
-    @Test(dataProvider = "plus")
+    @ParameterizedTest
+    @MethodSource("data_plus")
     public void test_minus_TemporalUnit(
             int expectedYear, int expectedMonth, int expectedDom,
             long amount, TemporalUnit unit,
             int year, int month, int dom) {
-        assertEquals(EthiopicDate.of(year, month, dom).minus(amount, unit), EthiopicDate.of(expectedYear, expectedMonth, expectedDom));
+        assertEquals(EthiopicDate.of(expectedYear, expectedMonth, expectedDom), EthiopicDate.of(year, month, dom).minus(amount, unit));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_plus_TemporalUnit_unsupported() {
-        EthiopicDate.of(2006, 6, 30).plus(0, MINUTES);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> EthiopicDate.of(2006, 6, 30).plus(0, MINUTES));
     }
 
     //-----------------------------------------------------------------------
     @Test
     public void test_plus_Period() {
-        assertEquals(EthiopicDate.of(2006, 5, 26).plus(EthiopicChronology.INSTANCE.period(0, 2, 3)), EthiopicDate.of(2006, 7, 29));
+        assertEquals(EthiopicDate.of(2006, 7, 29), EthiopicDate.of(2006, 5, 26).plus(EthiopicChronology.INSTANCE.period(0, 2, 3)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_plus_Period_ISO() {
-        assertEquals(EthiopicDate.of(2006, 5, 26).plus(Period.ofMonths(2)), EthiopicDate.of(2006, 7, 26));
+        assertThrows(DateTimeException.class, () -> EthiopicDate.of(2006, 5, 26).plus(Period.ofMonths(2)));
     }
 
     @Test
     public void test_minus_Period() {
-        assertEquals(EthiopicDate.of(2006, 5, 26).minus(EthiopicChronology.INSTANCE.period(0, 2, 3)), EthiopicDate.of(2006, 3, 23));
+        assertEquals(EthiopicDate.of(2006, 3, 23), EthiopicDate.of(2006, 5, 26).minus(EthiopicChronology.INSTANCE.period(0, 2, 3)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_minus_Period_ISO() {
-        assertEquals(EthiopicDate.of(2006, 5, 26).minus(Period.ofMonths(2)), EthiopicDate.of(2006, 3, 26));
+        assertThrows(DateTimeException.class, () -> EthiopicDate.of(2006, 5, 26).minus(Period.ofMonths(2)));
     }
 
     //-----------------------------------------------------------------------
     // EthiopicDate.until
     //-----------------------------------------------------------------------
-    @DataProvider(name = "until")
-    Object[][] data_until() {
+    public static Object[][] data_until() {
         return new Object[][] {
             {2006, 5, 26, 2006, 5, 26, DAYS, 0},
             {2006, 5, 26, 2006, 6, 1, DAYS, 5},
@@ -672,51 +685,41 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "until")
+    @ParameterizedTest
+    @MethodSource("data_until")
     public void test_until_TemporalUnit(
             int year1, int month1, int dom1,
             int year2, int month2, int dom2,
             TemporalUnit unit, long expected) {
         EthiopicDate start = EthiopicDate.of(year1, month1, dom1);
         EthiopicDate end = EthiopicDate.of(year2, month2, dom2);
-        assertEquals(start.until(end, unit), expected);
+        assertEquals(expected, start.until(end, unit));
     }
 
-    @Test(expectedExceptions = UnsupportedTemporalTypeException.class)
+    @Test
     public void test_until_TemporalUnit_unsupported() {
         EthiopicDate start = EthiopicDate.of(2006, 6, 30);
         EthiopicDate end = EthiopicDate.of(2006, 7, 1);
-        start.until(end, MINUTES);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> start.until(end, MINUTES));
     }
 
     //-----------------------------------------------------------------------
-    // equals()
+    // equals() / hashCode()
     //-----------------------------------------------------------------------
     @Test
-    void test_equals() {
-        EthiopicDate a1 = EthiopicDate.of(2004, 1, 3);
-        EthiopicDate a2 = EthiopicDate.of(2004, 1, 3);
-        EthiopicDate b = EthiopicDate.of(2004, 1, 4);
-        EthiopicDate c = EthiopicDate.of(2004, 2, 3);
-        EthiopicDate d = EthiopicDate.of(2005, 1, 3);
-
-        assertEquals(a1.equals(a1), true);
-        assertEquals(a1.equals(a2), true);
-        assertEquals(a1.equals(b), false);
-        assertEquals(a1.equals(c), false);
-        assertEquals(a1.equals(d), false);
-
-        assertEquals(a1.equals(null), false);
-        assertEquals(a1.equals(""), false);
-
-        assertEquals(a1.hashCode(), a2.hashCode());
+    public void test_equals_and_hashCode() {
+        new EqualsTester()
+            .addEqualityGroup(EthiopicDate.of(2004, 1, 3), EthiopicDate.of(2004, 1, 3))
+            .addEqualityGroup(EthiopicDate.of(2004, 1, 4), EthiopicDate.of(2004, 1, 4))
+            .addEqualityGroup(EthiopicDate.of(2004, 2, 3), EthiopicDate.of(2004, 2, 3))
+            .addEqualityGroup(EthiopicDate.of(2005, 1, 3), EthiopicDate.of(2005, 1, 3))
+            .testEquals();
     }
 
     //-----------------------------------------------------------------------
     // toString()
     //-----------------------------------------------------------------------
-    @DataProvider(name = "toString")
-    Object[][] data_toString() {
+    public static Object[][] data_toString() {
         return new Object[][] {
             {EthiopicDate.of(1, 1, 1), "Ethiopic INCARNATION 1-01-01"},
             {EthiopicDate.of(2007, 10, 28), "Ethiopic INCARNATION 2007-10-28"},
@@ -726,9 +729,10 @@ public class TestEthiopicChronology {
         };
     }
 
-    @Test(dataProvider = "toString")
+    @ParameterizedTest
+    @MethodSource("data_toString")
     public void test_toString(EthiopicDate ethiopic, String expected) {
-        assertEquals(ethiopic.toString(), expected);
+        assertEquals(expected, ethiopic.toString());
     }
 
 }

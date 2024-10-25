@@ -39,6 +39,7 @@ import java.time.ZoneId;
 import java.time.chrono.AbstractChronology;
 import java.time.chrono.ChronoLocalDateTime;
 import java.time.chrono.ChronoZonedDateTime;
+import java.time.chrono.Chronology;
 import java.time.chrono.Era;
 import java.time.format.ResolverStyle;
 import java.time.temporal.ChronoField;
@@ -74,7 +75,7 @@ import java.util.Map;
  * <li>leap-year - Leap years occur in every year whose last two digits are divisible by {@code 6}, are {@code 99}, or are {@code 00} and the year is <b>not</b> divisible by 400.
  * </ul>
  * <p>
- * For more information, please read the <a href="http://en.wikipedia.org/wiki/Pax_Calendar">Pax Calendar</a> Wikipedia article.
+ * For more information, please read the <a href="https://en.wikipedia.org/wiki/Pax_Calendar">Pax Calendar</a> Wikipedia article.
  *
  * <h3>Implementation Requirements</h3>
  * This class is immutable and thread-safe.
@@ -164,7 +165,7 @@ public final class PaxChronology extends AbstractChronology implements Serializa
      * Gets the ID of the chronology - 'Pax'.
      * <p>
      * The ID uniquely identifies the {@code Chronology}.
-     * It can be used to lookup the {@code Chronology} using {@link #of(String)}.
+     * It can be used to lookup the {@code Chronology} using {@link Chronology#of(String)}.
      *
      * @return the chronology ID - 'Pax'
      * @see #getCalendarType()

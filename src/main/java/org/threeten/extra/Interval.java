@@ -35,9 +35,16 @@ import java.io.Serializable;
 import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.TemporalAccessor;
 import java.util.Objects;
+
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
 
 /**
  * An immutable interval of time between two instants.
@@ -86,8 +93,8 @@ public final class Interval
      * <p>
      * The end instant must not be before the start instant.
      *
-     * @param startInclusive  the start instant, inclusive, MIN_DATE treated as unbounded, not null
-     * @param endExclusive  the end instant, exclusive, MAX_DATE treated as unbounded, not null
+     * @param startInclusive  the start instant, inclusive, {@link Instant#MIN} treated as unbounded, not null
+     * @param endExclusive  the end instant, exclusive, {@link Instant#MAX} treated as unbounded, not null
      * @return the half-open interval, not null
      * @throws DateTimeException if the end is before the start
      */
@@ -95,7 +102,7 @@ public final class Interval
         Objects.requireNonNull(startInclusive, "startInclusive");
         Objects.requireNonNull(endExclusive, "endExclusive");
         if (endExclusive.isBefore(startInclusive)) {
-            throw new DateTimeException("End instant must on or after start instant");
+            throw new DateTimeException("End instant must be equal or after start instant");
         }
         return new Interval(startInclusive, endExclusive);
     }
@@ -117,9 +124,53 @@ public final class Interval
         Objects.requireNonNull(startInclusive, "startInclusive");
         Objects.requireNonNull(duration, "duration");
         if (duration.isNegative()) {
-            throw new DateTimeException("Duration must not be zero or negative");
+            throw new DateTimeException("Duration must not be negative");
         }
         return new Interval(startInclusive, startInclusive.plus(duration));
+    }
+
+    /**
+     * Obtains an instance of {@code Interval} from the duration and the end.
+     * <p>
+     * The start instant is calculated as the end minus the duration.
+     * The duration must not be negative.
+     *
+     * @param duration  the duration from the start to the end, not null
+     * @param endExclusive  the end instant, exclusive, not null
+     * @return the interval, not null
+     * @throws DateTimeException if the end is before the start,
+     *  or if the duration addition cannot be made
+     * @throws ArithmeticException if numeric overflow occurs when subtracting the duration
+     */
+    public static Interval of(Duration duration, Instant endExclusive) {
+        Objects.requireNonNull(duration, "duration");
+        Objects.requireNonNull(endExclusive, "endExclusive");
+        if (duration.isNegative()) {
+            throw new DateTimeException("Duration must not be negative");
+        }
+        return new Interval(endExclusive.minus(duration), endExclusive);
+    }
+
+    /**
+     * Obtains an instance of {@code Interval} with the specified start instant and unbounded end.
+     *
+     * @param startInclusive the start instant, inclusive, not null
+     * @return a new {@code Instant} with the specified start instant.
+     */
+    public static Interval startingAt(Instant startInclusive) {
+        Objects.requireNonNull(startInclusive, "startInclusive");
+        return Interval.ALL.withStart(startInclusive);
+    }
+
+    /**
+     * Obtains an instance of {@code Interval} with unbounded start and the specified end instant.
+     *
+     * @param endExclusive the end instant, exclusive, not null
+     * @return a new {@code Instant} with the specified end instant.
+     */
+    public static Interval endingAt(Instant endExclusive) {
+        Objects.requireNonNull(endExclusive, "endExclusive");
+        return Interval.ALL.withEnd(endExclusive);
     }
 
     //-----------------------------------------------------------------------
@@ -127,47 +178,105 @@ public final class Interval
      * Obtains an instance of {@code Interval} from a text string such as
      * {@code 2007-12-03T10:15:30Z/2007-12-04T10:15:30Z}, where the end instant is exclusive.
      * <p>
-     * The string must consist of one of the following three formats:
+     * The string must consist of one of the following four formats:
      * <ul>
      * <li>a representations of an {@link OffsetDateTime}, followed by a forward slash,
      *  followed by a representation of a {@link OffsetDateTime}
+     * <li>a representations of an {@link OffsetDateTime}, followed by a forward slash,
+     *  followed by a representation of a {@link LocalDateTime}, where the end offset is implied.
      * <li>a representation of an {@link OffsetDateTime}, followed by a forward slash,
-     *  followed by a representation of a {@link Duration}
-     * <li>a representation of a {@link Duration}, followed by a forward slash,
+     *  followed by a representation of a {@link PeriodDuration}
+     * <li>a representation of a {@link PeriodDuration}, followed by a forward slash,
      *  followed by a representation of an {@link OffsetDateTime}
      * </ul>
-     *
+     * <p>
+     * ISO-8601 supports a very wide range of possible inputs, many of which are not supported here.
+     * For example, basic format, week-based dates, ordinal dates and date-style period formats are not supported.
      *
      * @param text  the text to parse, not null
      * @return the parsed interval, not null
      * @throws DateTimeParseException if the text cannot be parsed
      */
+    @FromString
     public static Interval parse(CharSequence text) {
         Objects.requireNonNull(text, "text");
         for (int i = 0; i < text.length(); i++) {
             if (text.charAt(i) == '/') {
-                char firstChar = text.charAt(0);
-                if (firstChar == 'P' || firstChar == 'p') {
-                    // duration followed by instant
-                    Duration duration = Duration.parse(text.subSequence(0, i));
-                    Instant end = OffsetDateTime.parse(text.subSequence(i + 1, text.length())).toInstant();
-                    return Interval.of(end.minus(duration), end);
-                } else {
-                    // instant followed by instant or duration
-                    Instant start = OffsetDateTime.parse(text.subSequence(0, i)).toInstant();
-                    if (i + 1 < text.length()) {
-                        char c = text.charAt(i + 1);
-                        if (c == 'P' || c == 'p') {
-                            Duration duration = Duration.parse(text.subSequence(i + 1, text.length()));
-                            return Interval.of(start, start.plus(duration));
-                        }
-                    }
-                    Instant end = OffsetDateTime.parse(text.subSequence(i + 1, text.length())).toInstant();
-                    return Interval.of(start, end);
-                }
+                return parseSplit(text.subSequence(0, i), text.subSequence(i + 1, text.length()));
             }
         }
         throw new DateTimeParseException("Interval cannot be parsed, no forward slash found", text, 0);
+    }
+
+    private static Interval parseSplit(CharSequence startStr, CharSequence endStr) {
+        char firstChar = startStr.charAt(0);
+        if (firstChar == 'P' || firstChar == 'p') {
+            // duration followed by instant
+            PeriodDuration amount = PeriodDuration.parse(startStr);
+            try {
+                OffsetDateTime end = OffsetDateTime.parse(endStr);
+                return Interval.of(end.minus(amount).toInstant(), end.toInstant());
+            } catch (DateTimeParseException ex) {
+                // handle case where Instant is outside the bounds of OffsetDateTime
+                Instant end = Instant.parse(endStr);
+                // addition of PeriodDuration only supported by OffsetDateTime,
+                // but to make that work need to move point being subtracted from closer to EPOCH
+                long move = end.isBefore(Instant.EPOCH) ? 1000 * 86400 : -1000 * 86400;
+                Instant start = end.plusSeconds(move).atOffset(ZoneOffset.UTC).minus(amount).toInstant().minusSeconds(move);
+                return Interval.of(start, end);
+            }
+        }
+        // instant followed by instant or duration
+        OffsetDateTime start;
+        try {
+            start = OffsetDateTime.parse(startStr);
+        } catch (DateTimeParseException ex) {
+            return parseStartExtended(startStr, endStr);
+        }
+        if (endStr.length() > 0) {
+            char c = endStr.charAt(0);
+            if (c == 'P' || c == 'p') {
+                PeriodDuration amount = PeriodDuration.parse(endStr);
+                return Interval.of(start.toInstant(), start.plus(amount).toInstant());
+            }
+        }
+        return parseEndDateTime(start.toInstant(), start.getOffset(), endStr);
+    }
+
+    // handle case where Instant is outside the bounds of OffsetDateTime
+    private static Interval parseStartExtended(CharSequence startStr, CharSequence endStr) {
+        Instant start = Instant.parse(startStr);
+        if (endStr.length() > 0) {
+            char c = endStr.charAt(0);
+            if (c == 'P' || c == 'p') {
+                PeriodDuration amount = PeriodDuration.parse(endStr);
+                // addition of PeriodDuration only supported by OffsetDateTime,
+                // but to make that work need to move point being added to closer to EPOCH
+                long move = start.isBefore(Instant.EPOCH) ? 1000 * 86400 : -1000 * 86400;
+                Instant end = start.plusSeconds(move).atOffset(ZoneOffset.UTC).plus(amount).toInstant().minusSeconds(move);
+                return Interval.of(start, end);
+            }
+        }
+        // infer offset from start if not specified by end
+        return parseEndDateTime(start, ZoneOffset.UTC, endStr);
+    }
+
+    // parse when there are two date-times
+    private static Interval parseEndDateTime(Instant start, ZoneOffset offset, CharSequence endStr) {
+        try {
+            TemporalAccessor temporal = DateTimeFormatter.ISO_DATE_TIME.parseBest(endStr, OffsetDateTime::from, LocalDateTime::from);
+            if (temporal instanceof OffsetDateTime) {
+                OffsetDateTime odt = (OffsetDateTime) temporal;
+                return Interval.of(start, odt.toInstant());
+            } else {
+                // infer offset from start if not specified by end
+                LocalDateTime ldt = (LocalDateTime) temporal;
+                return Interval.of(start, ldt.toInstant(offset));
+            }
+        } catch (DateTimeParseException ex) {
+            Instant end = Instant.parse(endStr);
+            return Interval.of(start, end);
+        }
     }
 
     //-----------------------------------------------------------------------
@@ -195,7 +304,7 @@ public final class Interval
         return start;
     }
 
-    /** 
+    /**
      * Gets the end of this time interval, exclusive.
      * <p>
      * This will return {@link Instant#MAX} if the range is unbounded at the end.
@@ -212,7 +321,7 @@ public final class Interval
      * Checks if the range is empty.
      * <p>
      * An empty range occurs when the start date equals the inclusive end date.
-     * 
+     *
      * @return true if the range is empty
      */
     public boolean isEmpty() {
@@ -221,7 +330,7 @@ public final class Interval
 
     /**
      * Checks if the start of the interval is unbounded.
-     * 
+     *
      * @return true if start is unbounded
      */
     public boolean isUnboundedStart() {
@@ -230,7 +339,7 @@ public final class Interval
 
     /**
      * Checks if the end of the interval is unbounded.
-     * 
+     *
      * @return true if end is unbounded
      */
     public boolean isUnboundedEnd() {
@@ -261,22 +370,6 @@ public final class Interval
     }
 
     //-----------------------------------------------------------------------
-    /**
-     * Checks if this interval contains the specified instant.
-     * <p>
-     * This checks if the specified instant is within the bounds of this interval.
-     * If this range has an unbounded start then {@code contains(Instant#MIN)} returns true.
-     * If this range has an unbounded end then {@code contains(Instant#MAX)} returns true.
-     * If this range is empty then this method always returns false.
-     *
-     * @param instant  the instant, not null
-     * @return true if this interval contains the instant
-     */
-    public boolean contains(Instant instant) {
-        Objects.requireNonNull(instant, "instant");
-        return start.compareTo(instant) <= 0 && (instant.compareTo(end) < 0 || isUnboundedEnd());
-    }
-
     /**
      * Checks if this interval encloses the specified interval.
      * <p>
@@ -324,7 +417,7 @@ public final class Interval
     /**
      * Checks if this interval overlaps the specified interval.
      * <p>
-     * The result is true if the the two intervals share some part of the time-line.
+     * The result is true if the two intervals share some part of the time-line.
      * An empty interval overlaps itself.
      * <p>
      * This is equivalent to {@code (isConnected(other) && !abuts(other))}.
@@ -343,7 +436,7 @@ public final class Interval
      * <p>
      * This finds the intersection of two intervals.
      * This throws an exception if the two intervals are not {@linkplain #isConnected(Interval) connected}.
-     * 
+     *
      * @param other  the other interval to check for, not null
      * @return the interval that is the intersection of the two intervals
      * @throws DateTimeException if the intervals do not connect
@@ -371,7 +464,7 @@ public final class Interval
      * <p>
      * This finds the union of two intervals.
      * This throws an exception if the two intervals are not {@linkplain #isConnected(Interval) connected}.
-     * 
+     *
      * @param other  the other interval to check for, not null
      * @return the interval that is the union of the two intervals
      * @throws DateTimeException if the intervals do not connect
@@ -399,7 +492,7 @@ public final class Interval
      * <p>
      * The result of this method will {@linkplain #encloses(Interval) enclose}
      * this interval and the specified interval.
-     * 
+     *
      * @param other  the other interval to check for, not null
      * @return the interval that spans the two intervals
      */
@@ -414,44 +507,15 @@ public final class Interval
 
     //-------------------------------------------------------------------------
     /**
-     * Checks if this interval is after the specified instant.
-     * <p>
-     * The result is true if the this instant starts after the specified instant.
-     * An empty interval behaves as though it is an instant for comparison purposes.
-     *
-     * @param instant  the other instant to compare to, not null
-     * @return true if the start of this interval is after the specified instant
-     */
-    public boolean isAfter(Instant instant) {
-        return start.compareTo(instant) > 0;
-    }
-
-    /**
-     * Checks if this interval is before the specified instant.
-     * <p>
-     * The result is true if the this instant ends before the specified instant.
-     * Since intervals do not include their end points, this will return true if the
-     * instant equals the end of the interval.
-     * An empty interval behaves as though it is an instant for comparison purposes.
-     *
-     * @param instant  the other instant to compare to, not null
-     * @return true if the start of this interval is before the specified instant
-     */
-    public boolean isBefore(Instant instant) {
-        return end.compareTo(instant) <= 0 && start.compareTo(instant) < 0;
-    }
-
-    //-------------------------------------------------------------------------
-    /**
      * Checks if this interval is after the specified interval.
      * <p>
-     * The result is true if the this instant starts after the end of the specified interval.
+     * The result is true if this interval starts after the end of the specified interval.
      * Since intervals do not include their end points, this will return true if the
-     * instant equals the end of the interval.
+     * two intervals abut.
      * An empty interval behaves as though it is an instant for comparison purposes.
      *
      * @param interval  the other interval to compare to, not null
-     * @return true if this instant is after the specified instant
+     * @return true if this interval is after the specified interval
      */
     public boolean isAfter(Interval interval) {
         return start.compareTo(interval.end) >= 0 && !interval.equals(this);
@@ -460,16 +524,180 @@ public final class Interval
     /**
      * Checks if this interval is before the specified interval.
      * <p>
-     * The result is true if the this instant ends before the start of the specified interval.
+     * The result is true if this interval ends before the start of the specified interval.
      * Since intervals do not include their end points, this will return true if the
      * two intervals abut.
      * An empty interval behaves as though it is an instant for comparison purposes.
      *
      * @param interval  the other interval to compare to, not null
-     * @return true if this instant is before the specified instant
+     * @return true if this interval is before the specified interval
      */
     public boolean isBefore(Interval interval) {
         return end.compareTo(interval.start) <= 0 && !interval.equals(this);
+    }
+
+    //-------------------------------------------------------------------------
+    /**
+     * Checks if this interval starts on or before the specified instant.
+     * <p>
+     * This method compares the start of the interval to the instant.
+     * An interval with an unbounded start is considered to start at {@code Instant.MIN}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval starts before the instant
+     */
+    public boolean startsBefore(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return start.compareTo(instant) < 0;
+    }
+
+    /**
+     * Checks if this interval starts at or before the specified instant.
+     * <p>
+     * This method compares the start of the interval to the instant.
+     * An interval with an unbounded start is considered to start at {@code Instant.MIN}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval starts at or before the instant
+     */
+    public boolean startsAtOrBefore(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return start.compareTo(instant) <= 0;
+    }
+
+    /**
+     * Checks if this interval starts on or after the specified instant.
+     * <p>
+     * This method compares the start of the interval to the instant.
+     * An interval with an unbounded start is considered to start at {@code Instant.MIN}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval starts after the instant
+     */
+    public boolean startsAfter(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return start.compareTo(instant) > 0;
+    }
+
+    /**
+     * Checks if this interval starts at or after the specified instant.
+     * <p>
+     * This method compares the start of the interval to the instant.
+     * An interval with an unbounded start is considered to start at {@code Instant.MIN}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval starts at or after the instant
+     */
+    public boolean startsAtOrAfter(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return start.compareTo(instant) >= 0;
+    }
+
+    //-------------------------------------------------------------------------
+    /**
+     * Checks if this interval ends before the specified instant.
+     * <p>
+     * This method compares the end of the interval to the instant.
+     * An interval with an unbounded end is considered to end after {@code Instant.MAX}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval ends before the instant
+     */
+    public boolean endsBefore(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return end.compareTo(instant) < 0 && !isUnboundedEnd();
+    }
+
+    /**
+     * Checks if this interval ends at or before the specified instant.
+     * <p>
+     * This method compares the end of the interval to the instant.
+     * An interval with an unbounded end is considered to end after {@code Instant.MAX}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval ends at or before the instant
+     */
+    public boolean endsAtOrBefore(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return end.compareTo(instant) <= 0 && !isUnboundedEnd();
+    }
+
+    /**
+     * Checks if this interval ends after the specified instant.
+     * <p>
+     * This method compares the end of the interval to the instant.
+     * An interval with an unbounded end is considered to end after {@code Instant.MAX}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval ends after the instant
+     */
+    public boolean endsAfter(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return end.compareTo(instant) > 0 || isUnboundedEnd();
+    }
+
+    /**
+     * Checks if this interval ends after the specified instant.
+     * <p>
+     * This method compares the end of the interval to the instant.
+     * An interval with an unbounded end is considered to end after {@code Instant.MAX}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval ends at or after the instant
+     */
+    public boolean endsAtOrAfter(Instant instant) {
+        Objects.requireNonNull(instant, "instant");
+        return end.compareTo(instant) >= 0 || isUnboundedEnd();
+    }
+
+    //-------------------------------------------------------------------------
+    /**
+     * Checks if this interval contains the specified instant.
+     * <p>
+     * This checks if the specified instant is within the bounds of this interval.
+     * If this interval has an unbounded start then {@code contains(Instant#MIN)} returns true.
+     * If this interval has an unbounded end then {@code contains(Instant#MAX)} returns true.
+     * Otherwise, if this interval is empty then this method returns false.
+     * <p>
+     * This is equivalent to {@link #startsAtOrBefore(Instant)} {@code &&} {@link #endsAfter(Instant)}.
+     *
+     * @param instant  the instant, not null
+     * @return true if this interval contains the instant
+     */
+    public boolean contains(Instant instant) {
+        return startsAtOrBefore(instant) && endsAfter(instant);
+    }
+
+    /**
+     * Checks if this interval is after the specified instant.
+     * <p>
+     * The result is true if this interval starts after the specified instant.
+     * An empty interval behaves as though it is an instant for comparison purposes.
+     * <p>
+     * This is equivalent to {@link #startsAfter(Instant)}.
+     *
+     * @param instant  the other instant to compare to, not null
+     * @return true if the start of this interval is after the specified instant
+     */
+    public boolean isAfter(Instant instant) {
+        return startsAfter(instant);
+    }
+
+    /**
+     * Checks if this interval is before the specified instant.
+     * <p>
+     * The result is true if this interval ends before the specified instant.
+     * Since intervals do not include their end points, this will return true if the
+     * instant equals the end of the interval.
+     * An empty interval behaves as though it is an instant for comparison purposes.
+     * <p>
+     * This is equivalent to {@link #endsAtOrBefore(Instant)} {@code &&} {@link #startsBefore(Instant)}.
+     *
+     * @param instant  the other instant to compare to, not null
+     * @return true if the end of this interval is before or equal to the specified instant
+     */
+    public boolean isBefore(Instant instant) {
+        return endsAtOrBefore(instant) && startsBefore(instant);
     }
 
     //-----------------------------------------------------------------------
@@ -528,6 +756,7 @@ public final class Interval
      * @return a string representation of this instant, not null
      */
     @Override
+    @ToString
     public String toString() {
         return start.toString() + '/' + end.toString();
     }

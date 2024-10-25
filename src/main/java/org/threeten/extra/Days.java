@@ -48,6 +48,9 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
+
 /**
  * A day-based amount of time, such as '12 days'.
  * <p>
@@ -203,11 +206,12 @@ public final class Days
      * @return the parsed period, not null
      * @throws DateTimeParseException if the text cannot be parsed to a period
      */
+    @FromString
     public static Days parse(CharSequence text) {
         Objects.requireNonNull(text, "text");
         Matcher matcher = PATTERN.matcher(text);
         if (matcher.matches()) {
-            int negate = ("-".equals(matcher.group(1)) ? -1 : 1);
+            int negate = "-".equals(matcher.group(1)) ? -1 : 1;
             String weeksStr = matcher.group(2);
             String daysStr = matcher.group(3);
             if (weeksStr != null || daysStr != null) {
@@ -281,7 +285,7 @@ public final class Days
      */
     @Override
     public long get(TemporalUnit unit) {
-        if (unit == ChronoUnit.DAYS) {
+        if (unit == DAYS) {
             return days;
         }
         throw new UnsupportedTemporalTypeException("Unsupported unit: " + unit);
@@ -310,6 +314,33 @@ public final class Days
      */
     public int getAmount() {
         return days;
+    }
+
+    /**
+     * Checks if the amount is negative.
+     *
+     * @return true if the amount is negative, false if the amount is zero or positive
+     */
+    public boolean isNegative() {
+        return getAmount() < 0;
+    }
+
+    /**
+     * Checks if the amount is zero.
+     *
+     * @return true if the amount is zero, false if not
+     */
+    public boolean isZero() {
+        return getAmount() == 0;
+    }
+
+    /**
+     * Checks if the amount is positive.
+     *
+     * @return true if the amount is positive, false if the amount is zero or negative
+     */
+    public boolean isPositive() {
+        return getAmount() > 0;
     }
 
     //-----------------------------------------------------------------------
@@ -353,13 +384,13 @@ public final class Days
      * <p>
      * This instance is immutable and unaffected by this method call.
      *
-     * @param amountToAdd  the amount to add, not null
+     * @param amountToSubtract  the amount to subtract, not null
      * @return a {@code Days} based on this instance with the requested amount subtracted, not null
      * @throws DateTimeException if the specified amount contains an invalid unit
      * @throws ArithmeticException if numeric overflow occurs
      */
-    public Days minus(TemporalAmount amountToAdd) {
-        return minus(Days.from(amountToAdd).getAmount());
+    public Days minus(TemporalAmount amountToSubtract) {
+        return minus(Days.from(amountToSubtract).getAmount());
     }
 
     /**
@@ -574,6 +605,7 @@ public final class Days
      * @return the number of days in ISO-8601 string format
      */
     @Override
+    @ToString
     public String toString() {
         return "P" + days + "D";
     }

@@ -35,7 +35,8 @@ import static java.time.temporal.ChronoUnit.DAYS;
 import static java.time.temporal.ChronoUnit.FOREVER;
 import static java.time.temporal.ChronoUnit.MINUTES;
 import static java.time.temporal.ChronoUnit.SECONDS;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -45,17 +46,17 @@ import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.time.format.ResolverStyle;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test PackedFields.
  */
-@Test
 public class TestPackedFields {
 
     //-----------------------------------------------------------------------
     // packedDate()
     //-----------------------------------------------------------------------
+    @Test
     public void test_date_basics() {
         assertEquals("PackedDate", PackedFields.PACKED_DATE.toString());
         assertEquals(DAYS, PackedFields.PACKED_DATE.getBaseUnit());
@@ -68,47 +69,51 @@ public class TestPackedFields {
         assertEquals(99991231, PackedFields.PACKED_DATE.range().getMaximum());
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_date_rangeRefinedBy_time() {
-        PackedFields.PACKED_DATE.rangeRefinedBy(LocalTime.of(11, 30));
+        assertThrows(DateTimeException.class, () -> PackedFields.PACKED_DATE.rangeRefinedBy(LocalTime.of(11, 30)));
     }
 
+    @Test
     public void test_date_getFrom() {
         assertEquals(20151203, LocalDate.of(2015, 12, 3).get(PackedFields.PACKED_DATE));
         assertEquals(10000101, LocalDate.of(1000, 1, 1).get(PackedFields.PACKED_DATE));
         assertEquals(99991231, LocalDate.of(9999, 12, 31).get(PackedFields.PACKED_DATE));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_date_getFrom_rangeLow() {
-        PackedFields.PACKED_DATE.getFrom(LocalDate.of(999, 12, 31));
+        assertThrows(DateTimeException.class, () -> PackedFields.PACKED_DATE.getFrom(LocalDate.of(999, 12, 31)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_date_getFrom_rangeHigh() {
-        PackedFields.PACKED_DATE.getFrom(LocalDate.of(10000, 1, 1));
+        assertThrows(DateTimeException.class, () -> PackedFields.PACKED_DATE.getFrom(LocalDate.of(10000, 1, 1)));
     }
 
+    @Test
     public void test_date_adjustInto() {
         assertEquals(LocalDate.of(2015, 12, 3), LocalDate.MIN.with(PackedFields.PACKED_DATE, 20151203));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_date_adjustInto_range() {
-        LocalDate.MIN.with(PackedFields.PACKED_DATE, 1230101);
+        assertThrows(DateTimeException.class, () -> LocalDate.MIN.with(PackedFields.PACKED_DATE, 1230101));
     }
 
+    @Test
     public void test_date_resolve() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_DATE).toFormatter();
         assertEquals(LocalDate.of(2015, 12, 3), LocalDate.parse("20151203", f));
     }
 
-    @Test(expectedExceptions = DateTimeParseException.class)
+    @Test
     public void test_date_resolve_invalid_smart() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_DATE).toFormatter();
-        LocalDate.parse("20151403", f.withResolverStyle(ResolverStyle.SMART));
+        assertThrows(DateTimeParseException.class, () -> LocalDate.parse("20151403", f.withResolverStyle(ResolverStyle.SMART)));
     }
 
+    @Test
     public void test_date_resolve_invalid_lenient() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_DATE).toFormatter();
         assertEquals(LocalDate.of(2016, 2, 3), LocalDate.parse("20151403", f.withResolverStyle(ResolverStyle.LENIENT)));
@@ -117,6 +122,7 @@ public class TestPackedFields {
     //-----------------------------------------------------------------------
     // packedHourMin()
     //-----------------------------------------------------------------------
+    @Test
     public void test_hourMin_basics() {
         assertEquals("PackedHourMin", PackedFields.PACKED_HOUR_MIN.toString());
         assertEquals(MINUTES, PackedFields.PACKED_HOUR_MIN.getBaseUnit());
@@ -129,36 +135,40 @@ public class TestPackedFields {
         assertEquals(2359, PackedFields.PACKED_HOUR_MIN.range().getMaximum());
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_hourMin_rangeRefinedBy_time() {
-        PackedFields.PACKED_HOUR_MIN.rangeRefinedBy(LocalDate.of(2015, 12, 3));
+        assertThrows(DateTimeException.class, () -> PackedFields.PACKED_HOUR_MIN.rangeRefinedBy(LocalDate.of(2015, 12, 3)));
     }
 
+    @Test
     public void test_hourMin_getFrom() {
         assertEquals(1130, LocalTime.of(11, 30).get(PackedFields.PACKED_HOUR_MIN));
         assertEquals(121, LocalTime.of(1, 21).get(PackedFields.PACKED_HOUR_MIN));
     }
 
+    @Test
     public void test_hourMin_adjustInto() {
         assertEquals(LocalTime.of(11, 30), LocalTime.MIDNIGHT.with(PackedFields.PACKED_HOUR_MIN, 1130));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_hourMin_adjustInto_value() {
-        LocalDate.MIN.with(PackedFields.PACKED_HOUR_MIN, 1273);
+        assertThrows(DateTimeException.class, () -> LocalDate.MIN.with(PackedFields.PACKED_HOUR_MIN, 1273));
     }
 
+    @Test
     public void test_hourMin_resolve() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_HOUR_MIN).toFormatter();
         assertEquals(LocalTime.of(11, 30), LocalTime.parse("1130", f));
     }
 
-    @Test(expectedExceptions = DateTimeParseException.class)
+    @Test
     public void test_hourMin_resolve_invalid_smart() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_HOUR_MIN).toFormatter();
-        LocalTime.parse("1173", f.withResolverStyle(ResolverStyle.SMART));
+        assertThrows(DateTimeParseException.class, () -> LocalTime.parse("1173", f.withResolverStyle(ResolverStyle.SMART)));
     }
 
+    @Test
     public void test_hourMin_resolve_invalid_lenient() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_HOUR_MIN).toFormatter();
         assertEquals(LocalTime.of(12, 13), LocalTime.parse("1173", f.withResolverStyle(ResolverStyle.LENIENT)));
@@ -167,6 +177,7 @@ public class TestPackedFields {
     //-----------------------------------------------------------------------
     // packedTime()
     //-----------------------------------------------------------------------
+    @Test
     public void test_time_basics() {
         assertEquals("PackedTime", PackedFields.PACKED_TIME.toString());
         assertEquals(SECONDS, PackedFields.PACKED_TIME.getBaseUnit());
@@ -179,37 +190,41 @@ public class TestPackedFields {
         assertEquals(235959, PackedFields.PACKED_TIME.range().getMaximum());
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_time_rangeRefinedBy_time() {
-        PackedFields.PACKED_TIME.rangeRefinedBy(LocalDate.of(2015, 12, 3));
+        assertThrows(DateTimeException.class, () -> PackedFields.PACKED_TIME.rangeRefinedBy(LocalDate.of(2015, 12, 3)));
     }
 
+    @Test
     public void test_time_getFrom() {
         assertEquals(113052, LocalTime.of(11, 30, 52).get(PackedFields.PACKED_TIME));
         assertEquals(113000, LocalTime.of(11, 30).get(PackedFields.PACKED_TIME));
         assertEquals(12100, LocalTime.of(1, 21).get(PackedFields.PACKED_TIME));
     }
 
+    @Test
     public void test_time_adjustInto() {
         assertEquals(LocalTime.of(11, 30, 52), LocalTime.MIDNIGHT.with(PackedFields.PACKED_TIME, 113052));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_time_adjustInto_value() {
-        LocalDate.MIN.with(PackedFields.PACKED_TIME, 127310);
+        assertThrows(DateTimeException.class, () -> LocalDate.MIN.with(PackedFields.PACKED_TIME, 127310));
     }
 
+    @Test
     public void test_time_resolve() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_TIME).toFormatter();
         assertEquals(LocalTime.of(11, 30, 52), LocalTime.parse("113052", f));
     }
 
-    @Test(expectedExceptions = DateTimeParseException.class)
+    @Test
     public void test_time_resolve_invalid_smart() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_TIME).toFormatter();
-        LocalTime.parse("117361", f.withResolverStyle(ResolverStyle.SMART));
+        assertThrows(DateTimeParseException.class, () -> LocalTime.parse("117361", f.withResolverStyle(ResolverStyle.SMART)));
     }
 
+    @Test
     public void test_time_resolve_invalid_lenient() {
         DateTimeFormatter f = new DateTimeFormatterBuilder().appendValue(PackedFields.PACKED_TIME).toFormatter();
         assertEquals(LocalTime.of(12, 14, 1), LocalTime.parse("117361", f.withResolverStyle(ResolverStyle.LENIENT)));

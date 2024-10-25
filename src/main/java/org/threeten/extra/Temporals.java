@@ -37,8 +37,12 @@ import static java.time.temporal.ChronoUnit.ERAS;
 import static java.time.temporal.ChronoUnit.FOREVER;
 import static java.time.temporal.ChronoUnit.WEEKS;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.math.RoundingMode;
 import java.text.ParsePosition;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.ChronoUnit;
@@ -88,6 +92,19 @@ public final class Temporals {
     }
 
     /**
+     * Returns an adjuster that returns the next working day or same day if already working day, ignoring Saturday and Sunday.
+     * <p>
+     * Some territories have weekends that do not consist of Saturday and Sunday.
+     * No implementation is supplied to support this, however an adjuster
+     * can be easily written to do so.
+     * 
+     * @return the next working day or same adjuster, not null
+     */
+    public static TemporalAdjuster nextWorkingDayOrSame() {
+        return Adjuster.NEXT_WORKING_OR_SAME;
+    }
+
+    /**
      * Returns an adjuster that returns the previous working day, ignoring Saturday and Sunday.
      * <p>
      * Some territories have weekends that do not consist of Saturday and Sunday.
@@ -98,6 +115,19 @@ public final class Temporals {
      */
     public static TemporalAdjuster previousWorkingDay() {
         return Adjuster.PREVIOUS_WORKING;
+    }
+
+    /**
+     * Returns an adjuster that returns the previous working day or same day if already working day, ignoring Saturday and Sunday.
+     * <p>
+     * Some territories have weekends that do not consist of Saturday and Sunday.
+     * No implementation is supplied to support this, however an adjuster
+     * can be easily written to do so.
+     * 
+     * @return the previous working day or same adjuster, not null
+     */
+    public static TemporalAdjuster previousWorkingDayOrSame() {
+        return Adjuster.PREVIOUS_WORKING_OR_SAME;
     }
 
     //-----------------------------------------------------------------------
@@ -135,6 +165,36 @@ public final class Temporals {
                 }
             }
         },
+        /** Next working day or same adjuster. */
+        NEXT_WORKING_OR_SAME {
+            @Override
+            public Temporal adjustInto(Temporal temporal) {
+                int dow = temporal.get(DAY_OF_WEEK);
+                switch (dow) {
+                    case 6: // Saturday
+                        return temporal.plus(2, DAYS);
+                    case 7: // Sunday
+                        return temporal.plus(1, DAYS);
+                    default:
+                        return temporal;
+                }
+            }
+        },
+        /** Previous working day or same adjuster. */
+        PREVIOUS_WORKING_OR_SAME {
+            @Override
+            public Temporal adjustInto(Temporal temporal) {
+                int dow = temporal.get(DAY_OF_WEEK);
+                switch (dow) {
+                    case 6: //Saturday
+                        return temporal.minus(1, DAYS);
+                    case 7:  // Sunday
+                        return temporal.minus(2, DAYS);
+                    default:
+                        return temporal;
+                }
+            }
+        }
     }
 
     //-------------------------------------------------------------------------
@@ -330,4 +390,91 @@ public final class Temporals {
         return 3;  // quarters
     }
 
+    //-------------------------------------------------------------------------
+    /**
+     * Converts a duration to a {@code BigDecimal} with a scale of 9.
+     *
+     * @param duration  the duration to convert, not null
+     * @return the {@code BigDecimal} equivalent of the duration, in seconds with a scale of 9
+     */
+    public static BigDecimal durationToBigDecimalSeconds(Duration duration) {
+        return BigDecimal.valueOf(duration.getSeconds()).add(BigDecimal.valueOf(duration.getNano(), 9));
+    }
+
+    /**
+     * Converts a {@code BigDecimal} representing seconds to a duration, saturating if necessary.
+     * <p>
+     * No exception is thrown by this method.
+     * Numbers are rounded up to the nearest nanosecond (away from zero).
+     * The duration will saturate at the biggest positive or negative {@code Duration}.
+     *
+     * @param seconds  the number of seconds to convert, positive or negative
+     * @return a {@code Duration}, not null
+     */
+    public static Duration durationFromBigDecimalSeconds(BigDecimal seconds) {
+        BigInteger nanos = seconds.setScale(9, RoundingMode.UP).max(BigDecimalSeconds.MIN).min(BigDecimalSeconds.MAX).unscaledValue();
+        BigInteger[] secondsNanos = nanos.divideAndRemainder(BigInteger.valueOf(1_000_000_000));
+        return Duration.ofSeconds(secondsNanos[0].longValue(), secondsNanos[1].intValue());
+    }
+
+    /**
+     * Converts a duration to a {@code double}.
+     *
+     * @param duration  the duration to convert, not null
+     * @return the {@code double} equivalent of the duration, in seconds
+     */
+    public static double durationToDoubleSeconds(Duration duration) {
+        if (duration.getSeconds() < 1_000_000_000) {
+            return duration.toNanos() / 1_000_000_000d;
+        }
+        return durationToBigDecimalSeconds(duration).doubleValue();
+    }
+
+    /**
+     * Converts a {@code double} representing seconds to a duration, saturating if necessary.
+     * <p>
+     * No exception is thrown by this method.
+     * Numbers are rounded up to the nearest nanosecond (away from zero).
+     * The duration will saturate at the biggest positive or negative {@code Duration}.
+     *
+     * @param seconds  the number of seconds to convert, positive or negative
+     * @return a {@code Duration}, not null
+     */
+    public static Duration durationFromDoubleSeconds(double seconds) {
+        return durationFromBigDecimalSeconds(BigDecimal.valueOf(seconds));
+    }
+
+    /**
+     * Multiplies a duration by a {@code double}.
+     * <p>
+     * The amount is rounded away from zero, thus the result is only zero if zero is passed in.
+     * See {@link #durationToBigDecimalSeconds(Duration)} and {@link #durationFromBigDecimalSeconds(BigDecimal)}.
+     * Note that due to the rounding up, 1 nanosecond multiplied by any number smaller than 1 will still be 1 nanosecond.
+     * 
+     * @param duration  the duration to multiply, not null
+     * @param multiplicand  the multiplication factor
+     * @return the multiplied duration, not null
+     */
+    public static Duration multiply(Duration duration, double multiplicand) {
+        if (multiplicand == 0d || duration.isZero()) {
+            return Duration.ZERO;
+        }
+        if (multiplicand == 1d) {
+            return duration;
+        }
+        BigDecimal amount = durationToBigDecimalSeconds(duration);
+        amount = amount.multiply(BigDecimal.valueOf(multiplicand));
+        return durationFromBigDecimalSeconds(amount);
+    }
+
+    /**
+     * Useful Duration constants expressed as BigDecimal seconds with a scale of 9.
+     */
+    private static final class BigDecimalSeconds {
+        public static final BigDecimal MIN = BigDecimal.valueOf(Long.MIN_VALUE).add(BigDecimal.valueOf(0, 9));
+        public static final BigDecimal MAX = BigDecimal.valueOf(Long.MAX_VALUE).add(BigDecimal.valueOf(999_999_999, 9));
+
+        private BigDecimalSeconds() {
+        }
+    }
 }

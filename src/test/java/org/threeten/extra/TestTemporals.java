@@ -52,11 +52,12 @@ import static java.time.temporal.ChronoUnit.SECONDS;
 import static java.time.temporal.ChronoUnit.WEEKS;
 import static java.time.temporal.ChronoUnit.YEARS;
 import static java.time.temporal.IsoFields.QUARTER_YEARS;
-import static org.testng.Assert.assertThrows;
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertFalse;
-import static org.testng.AssertJUnit.assertSame;
-import static org.testng.AssertJUnit.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -64,7 +65,9 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.DateTimeException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.Month;
 import java.time.format.DateTimeFormatter;
@@ -76,13 +79,13 @@ import java.time.temporal.TemporalUnit;
 import java.time.temporal.UnsupportedTemporalTypeException;
 import java.util.concurrent.TimeUnit;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test Temporals.
  */
-@Test
 public class TestTemporals {
 
     //-----------------------------------------------------------------------
@@ -90,16 +93,15 @@ public class TestTemporals {
     //-----------------------------------------------------------------------
     @Test
     public void test_nextWorkingDay_serialization() throws IOException, ClassNotFoundException {
-        TemporalAdjuster nextWorkingDay = Temporals.nextWorkingDay();
-        assertTrue(nextWorkingDay instanceof Serializable);
-
+        TemporalAdjuster test = Temporals.nextWorkingDay();
+        assertInstanceOf(Serializable.class, test);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(nextWorkingDay);
-        oos.close();
-
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
-        assertSame(ois.readObject(), nextWorkingDay);
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(test);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            assertSame(test, ois.readObject());
+        }
     }
 
     @Test
@@ -109,13 +111,13 @@ public class TestTemporals {
                 LocalDate date = LocalDate.of(2007, month, i);
                 LocalDate test = (LocalDate) Temporals.nextWorkingDay().adjustInto(date);
                 assertTrue(test.isAfter(date));
-                assertFalse(test.getDayOfWeek().equals(SATURDAY));
-                assertFalse(test.getDayOfWeek().equals(SUNDAY));
+                assertNotEquals(SATURDAY, test.getDayOfWeek());
+                assertNotEquals(SUNDAY, test.getDayOfWeek());
 
                 switch (date.getDayOfWeek()) {
                     case FRIDAY:
                     case SATURDAY:
-                        assertEquals(test.getDayOfWeek(), MONDAY);
+                        assertEquals(MONDAY, test.getDayOfWeek());
                         break;
                     default:
                         assertEquals(date.getDayOfWeek().plus(1), test.getDayOfWeek());
@@ -125,18 +127,18 @@ public class TestTemporals {
                     int dayDiff = test.getDayOfYear() - date.getDayOfYear();
                     switch (date.getDayOfWeek()) {
                         case FRIDAY:
-                            assertEquals(dayDiff, 3);
+                            assertEquals(3, dayDiff);
                             break;
                         case SATURDAY:
-                            assertEquals(dayDiff, 2);
+                            assertEquals(2, dayDiff);
                             break;
                         default:
-                            assertEquals(dayDiff, 1);
+                            assertEquals(1, dayDiff);
                     }
                 } else {
-                    assertEquals(test.getYear(), 2008);
-                    assertEquals(test.getMonth(), JANUARY);
-                    assertEquals(test.getDayOfMonth(), 1);
+                    assertEquals(2008, test.getYear());
+                    assertEquals(JANUARY, test.getMonth());
+                    assertEquals(1, test.getDayOfMonth());
                 }
             }
         }
@@ -154,20 +156,85 @@ public class TestTemporals {
     }
 
     //-----------------------------------------------------------------------
+    // nextWorkingDayOrSame()
+    //-----------------------------------------------------------------------
+    @Test
+    public void test_nextWorkingDayOrSame_serialization() throws IOException, ClassNotFoundException {
+        TemporalAdjuster test = Temporals.nextWorkingDayOrSame();
+        assertInstanceOf(Serializable.class, test);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(test);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            assertSame(test, ois.readObject());
+        }
+    }
+
+    @Test
+    public void test_nextWorkingDayOrSame() {
+        for (Month month : Month.values()) {
+            for (int i = 1; i <= month.length(false); i++) {
+                LocalDate date = LocalDate.of(2007, month, i);
+                LocalDate test = (LocalDate) Temporals.nextWorkingDayOrSame().adjustInto(date);
+                assertNotEquals(SATURDAY, test.getDayOfWeek());
+                assertNotEquals(SUNDAY, test.getDayOfWeek());
+
+                switch (date.getDayOfWeek()) {
+                    case SATURDAY:
+                    case SUNDAY:
+                        assertEquals(MONDAY, test.getDayOfWeek());
+                        break;
+                    default:
+                        assertEquals(date.getDayOfWeek(), test.getDayOfWeek());
+                }
+
+                if (test.getYear() == 2007) {
+                    int dayDiff = test.getDayOfYear() - date.getDayOfYear();
+                    switch (date.getDayOfWeek()) {
+                        case SATURDAY:
+                            assertEquals(2, dayDiff);
+                            break;
+                        case SUNDAY:
+                            assertEquals(1, dayDiff);
+                            break;
+                        default:
+                            assertEquals(0, dayDiff);
+                    }
+                } else {
+                    assertEquals(2008, test.getYear());
+                    assertEquals(JANUARY, test.getMonth());
+                    assertEquals(1, test.getDayOfMonth());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void test_nextWorkingDayOrSame_yearChange() {
+        LocalDate saturday = LocalDate.of(2016, DECEMBER, 31);
+        Temporal test = Temporals.nextWorkingDayOrSame().adjustInto(saturday);
+        assertEquals(LocalDate.of(2017, JANUARY, 2), test);
+
+        LocalDate sunday = LocalDate.of(2017, DECEMBER, 31);
+        test = Temporals.nextWorkingDayOrSame().adjustInto(sunday);
+        assertEquals(LocalDate.of(2018, JANUARY, 1), test);
+    }
+
+    //-----------------------------------------------------------------------
     // previousWorkingDay()
     //-----------------------------------------------------------------------
     @Test
     public void test_previousWorkingDay_serialization() throws IOException, ClassNotFoundException {
-        TemporalAdjuster previousWorkingDay = Temporals.previousWorkingDay();
-        assertTrue(previousWorkingDay instanceof Serializable);
-
+        TemporalAdjuster test = Temporals.previousWorkingDay();
+        assertInstanceOf(Serializable.class, test);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(previousWorkingDay);
-        oos.close();
-
-        ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
-        assertSame(ois.readObject(), previousWorkingDay);
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(test);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            assertSame(test, ois.readObject());
+        }
     }
 
     @Test
@@ -177,13 +244,13 @@ public class TestTemporals {
                 LocalDate date = LocalDate.of(2007, month, i);
                 LocalDate test = (LocalDate) Temporals.previousWorkingDay().adjustInto(date);
                 assertTrue(test.isBefore(date));
-                assertFalse(test.getDayOfWeek().equals(SATURDAY));
-                assertFalse(test.getDayOfWeek().equals(SUNDAY));
+                assertNotEquals(SATURDAY, test.getDayOfWeek());
+                assertNotEquals(SUNDAY, test.getDayOfWeek());
 
                 switch (date.getDayOfWeek()) {
                     case MONDAY:
                     case SUNDAY:
-                        assertEquals(test.getDayOfWeek(), FRIDAY);
+                        assertEquals(FRIDAY, test.getDayOfWeek());
                         break;
                     default:
                         assertEquals(date.getDayOfWeek().minus(1), test.getDayOfWeek());
@@ -193,18 +260,18 @@ public class TestTemporals {
                     int dayDiff = test.getDayOfYear() - date.getDayOfYear();
                     switch (date.getDayOfWeek()) {
                         case MONDAY:
-                            assertEquals(dayDiff, -3);
+                            assertEquals(-3, dayDiff);
                             break;
                         case SUNDAY:
-                            assertEquals(dayDiff, -2);
+                            assertEquals(-2, dayDiff);
                             break;
                         default:
-                            assertEquals(dayDiff, -1);
+                            assertEquals(-1, dayDiff);
                     }
                 } else {
-                    assertEquals(test.getYear(), 2006);
-                    assertEquals(test.getMonth(), DECEMBER);
-                    assertEquals(test.getDayOfMonth(), 29);
+                    assertEquals(2006, test.getYear());
+                    assertEquals(DECEMBER, test.getMonth());
+                    assertEquals(29, test.getDayOfMonth());
                 }
             }
         }
@@ -222,40 +289,107 @@ public class TestTemporals {
     }
 
     //-----------------------------------------------------------------------
+    // previousWorkingDayOrSame()
+    //-----------------------------------------------------------------------
+    @Test
+    public void test_previousWorkingDayOrSame_serialization() throws IOException, ClassNotFoundException {
+        TemporalAdjuster test = Temporals.previousWorkingDayOrSame();
+        assertInstanceOf(Serializable.class, test);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(test);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            assertSame(test, ois.readObject());
+        }
+    }
+
+    @Test
+    public void test_previousWorkingDayOrSame() {
+        for (Month month : Month.values()) {
+            for (int i = 1; i <= month.length(false); i++) {
+                LocalDate date = LocalDate.of(2007, month, i);
+                LocalDate test = (LocalDate) Temporals.previousWorkingDayOrSame().adjustInto(date);
+                assertNotEquals(SATURDAY, test.getDayOfWeek());
+                assertNotEquals(SUNDAY, test.getDayOfWeek());
+
+                switch (date.getDayOfWeek()) {
+                    case SATURDAY:
+                    case SUNDAY:
+                        assertEquals(FRIDAY, test.getDayOfWeek());
+                        break;
+                    default:
+                        assertEquals(date.getDayOfWeek(), test.getDayOfWeek());
+                }
+
+                if (test.getYear() == 2007) {
+                    int dayDiff = test.getDayOfYear() - date.getDayOfYear();
+                    switch (date.getDayOfWeek()) {
+                        case SATURDAY:
+                            assertEquals(-1, dayDiff);
+                            break;
+                        case SUNDAY:
+                            assertEquals(-2, dayDiff);
+                            break;
+                        default:
+                            assertEquals(0, dayDiff);
+                    }
+                } else {
+                    assertEquals(2006, test.getYear());
+                    assertEquals(DECEMBER, test.getMonth());
+                    assertEquals(29, test.getDayOfMonth());
+                }
+            }
+        }
+    }
+
+    @Test
+    public void test_previousWorkingDayOrSame_yearChange() {
+
+        LocalDate sunday = LocalDate.of(2011, JANUARY, 2);
+        Temporal test = Temporals.previousWorkingDayOrSame().adjustInto(sunday);
+        assertEquals(LocalDate.of(2010, DECEMBER, 31), test);
+
+        LocalDate saturday = LocalDate.of(2011, JANUARY, 1);
+        test = Temporals.previousWorkingDayOrSame().adjustInto(saturday);
+        assertEquals(LocalDate.of(2010, DECEMBER, 31), test);
+    }
+
+    //-----------------------------------------------------------------------
     // parseFirstMatching()
     //-----------------------------------------------------------------------
-    @DataProvider(name = "parseFirstMatching")
-    Object[][] data_parseFirstMatching() {
+    public static Object[][] data_parseFirstMatching() {
         return new Object[][] {
             {"2016-09-06", DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.BASIC_ISO_DATE},
             {"20160906", DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.BASIC_ISO_DATE},
         };
     }
 
-    @Test(dataProvider = "parseFirstMatching")
+    @ParameterizedTest
+    @MethodSource("data_parseFirstMatching")
     public void test_parseFirstMatching(String text, DateTimeFormatter fmt1, DateTimeFormatter fmt2) {
-        assertEquals(Temporals.parseFirstMatching(text, LocalDate::from, fmt1, fmt2), LocalDate.of(2016, 9, 6));
+        assertEquals(LocalDate.of(2016, 9, 6), Temporals.parseFirstMatching(text, LocalDate::from, fmt1, fmt2));
     }
 
+    @Test
     public void test_parseFirstMatching_zero() {
         assertThrows(DateTimeParseException.class, () -> Temporals.parseFirstMatching("2016-09-06", LocalDate::from));
     }
 
+    @Test
     public void test_parseFirstMatching_one() {
-        assertEquals(Temporals.parseFirstMatching("2016-09-06", LocalDate::from, DateTimeFormatter.ISO_LOCAL_DATE), LocalDate.of(2016, 9, 6));
+        assertEquals(LocalDate.of(2016, 9, 6), Temporals.parseFirstMatching("2016-09-06", LocalDate::from, DateTimeFormatter.ISO_LOCAL_DATE));
     }
 
+    @Test
     public void test_parseFirstMatching_twoNoMatch() {
-        assertThrows(
-            DateTimeParseException.class,
-            () -> Temporals.parseFirstMatching("2016", LocalDate::from, DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.BASIC_ISO_DATE));
+        assertThrows(DateTimeParseException.class, () -> Temporals.parseFirstMatching("2016", LocalDate::from, DateTimeFormatter.ISO_LOCAL_DATE, DateTimeFormatter.BASIC_ISO_DATE));
     }
 
     //-----------------------------------------------------------------------
     // chronoUnit() / timeUnit()
     //-----------------------------------------------------------------------
-    @DataProvider(name = "timeUnitConversion")
-    Object[][] data_timeUnitConversion() {
+    public static Object[][] data_timeUnitConversion() {
         return new Object[][] {
             {ChronoUnit.NANOS, TimeUnit.NANOSECONDS},
             {ChronoUnit.MICROS, TimeUnit.MICROSECONDS},
@@ -267,36 +401,37 @@ public class TestTemporals {
         };
     }
 
-    @Test(dataProvider = "timeUnitConversion")
+    @ParameterizedTest
+    @MethodSource("data_timeUnitConversion")
     public void test_timeUnit(ChronoUnit chronoUnit, TimeUnit timeUnit) {
-        assertEquals(Temporals.timeUnit(chronoUnit), timeUnit);
+        assertEquals(timeUnit, Temporals.timeUnit(chronoUnit));
     }
 
-    @Test(expectedExceptions = IllegalArgumentException.class)
+    @Test
     public void test_timeUnit_unknown() {
-        Temporals.timeUnit(ChronoUnit.MONTHS);
+        assertThrows(IllegalArgumentException.class, () -> Temporals.timeUnit(ChronoUnit.MONTHS));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_timeUnit_null() {
-        Temporals.timeUnit(null);
+        assertThrows(NullPointerException.class, () -> Temporals.timeUnit(null));
     }
 
-    @Test(dataProvider = "timeUnitConversion")
+    @ParameterizedTest
+    @MethodSource("data_timeUnitConversion")
     public void test_chronoUnit(ChronoUnit chronoUnit, TimeUnit timeUnit) {
-        assertEquals(Temporals.chronoUnit(timeUnit), chronoUnit);
+        assertEquals(chronoUnit, Temporals.chronoUnit(timeUnit));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_chronoUnit_null() {
-        Temporals.chronoUnit(null);
+        assertThrows(NullPointerException.class, () -> Temporals.chronoUnit(null));
     }
 
     //-----------------------------------------------------------------------
     // convertAmount()
     //-------------------------------------------------------------------------
-    @DataProvider(name = "convertAmount")
-    Object[][] data_convertAmount() {
+    public static Object[][] data_convertAmount() {
         return new Object[][] {
             {2L, NANOS, SECONDS, 0L, 2L},
             {999_999_999L, NANOS, SECONDS, 0L, 999_999_999L},
@@ -442,22 +577,24 @@ public class TestTemporals {
         };
     }
 
-    @Test(dataProvider = "convertAmount")
+    @ParameterizedTest
+    @MethodSource("data_convertAmount")
     public void test_convertAmount(
             long fromAmount, TemporalUnit fromUnit, TemporalUnit resultUnit,
             long resultWhole, long resultRemainder) {
         long[] result = Temporals.convertAmount(fromAmount, fromUnit, resultUnit);
-        assertEquals(result[0], resultWhole);
-        assertEquals(result[1], resultRemainder);
+        assertEquals(resultWhole, result[0]);
+        assertEquals(resultRemainder, result[1]);
     }
 
-    @Test(dataProvider = "convertAmount")
+    @ParameterizedTest
+    @MethodSource("data_convertAmount")
     public void test_convertAmount_negative(
             long fromAmount, TemporalUnit fromUnit, TemporalUnit resultUnit,
             long resultWhole, long resultRemainder) {
         long[] result = Temporals.convertAmount(-fromAmount, fromUnit, resultUnit);
-        assertEquals(result[0], -resultWhole);
-        assertEquals(result[1], -resultRemainder);
+        assertEquals(-resultWhole, result[0]);
+        assertEquals(-resultRemainder, result[1]);
     }
 
     @Test
@@ -465,8 +602,8 @@ public class TestTemporals {
         for (ChronoUnit unit : ChronoUnit.values()) {
             if (unit != ERAS && unit != FOREVER) {
                 long[] result = Temporals.convertAmount(0, unit, unit);
-                assertEquals(result[0], 0);
-                assertEquals(result[1], 0);
+                assertEquals(0, result[0]);
+                assertEquals(0, result[1]);
             }
         }
     }
@@ -476,14 +613,13 @@ public class TestTemporals {
         for (ChronoUnit unit : ChronoUnit.values()) {
             if (unit != ERAS && unit != FOREVER) {
                 long[] result = Temporals.convertAmount(2, unit, unit);
-                assertEquals(result[0], 2);
-                assertEquals(result[1], 0);
+                assertEquals(2, result[0]);
+                assertEquals(0, result[1]);
             }
         }
     }
 
-    @DataProvider(name = "convertAmountInvalid")
-    Object[][] data_convertAmountInvalid() {
+    public static Object[][] data_convertAmountInvalid() {
         return new Object[][] {
             {SECONDS, MONTHS},
             {SECONDS, QUARTER_YEARS},
@@ -501,13 +637,13 @@ public class TestTemporals {
         };
     }
 
-    @Test(dataProvider = "convertAmountInvalid", expectedExceptions = DateTimeException.class)
+    @ParameterizedTest
+    @MethodSource("data_convertAmountInvalid")
     public void test_convertAmountInvalid(TemporalUnit fromUnit, TemporalUnit resultUnit) {
-        Temporals.convertAmount(1, fromUnit, resultUnit);
+        assertThrows(DateTimeException.class, () -> Temporals.convertAmount(1, fromUnit, resultUnit));
     }
 
-    @DataProvider(name = "convertAmountInvalidUnsupported")
-    Object[][] data_convertAmountInvalidUnsupported() {
+    public static Object[][] data_convertAmountInvalidUnsupported() {
         return new Object[][] {
             {SECONDS, ERAS},
             {ERAS, SECONDS},
@@ -524,9 +660,113 @@ public class TestTemporals {
         };
     }
 
-    @Test(dataProvider = "convertAmountInvalidUnsupported", expectedExceptions = UnsupportedTemporalTypeException.class)
+    @ParameterizedTest
+    @MethodSource("data_convertAmountInvalidUnsupported")
     public void test_convertAmountInvalidUnsupported(TemporalUnit fromUnit, TemporalUnit resultUnit) {
-        Temporals.convertAmount(1, fromUnit, resultUnit);
+        assertThrows(UnsupportedTemporalTypeException.class, () -> Temporals.convertAmount(1, fromUnit, resultUnit));
+    }
+
+    //-----------------------------------------------------------------------
+    // duration to/from BigDecimal/double
+    //-------------------------------------------------------------------------
+    public static Object[][] data_durationConversions() {
+        return new Object[][] {
+            {Duration.ZERO, BigDecimal.valueOf(0, 9), 0d},
+            {Duration.ofSeconds(1, 0), new BigDecimal("1.000000000"), 1d},
+            {Duration.ofSeconds(1, 500_000_000), new BigDecimal("1.500000000"), 1.5d},
+            {Duration.ofSeconds(0, -400_000_000), new BigDecimal("-0.400000000"), -0.4d},
+        };
+    }
+
+    @ParameterizedTest
+    @MethodSource("data_durationConversions")
+    public void test_durationToBigDecimalSeconds(Duration input, BigDecimal expected, double ignored) {
+        BigDecimal test = Temporals.durationToBigDecimalSeconds(input);
+        assertEquals(expected, test);
+    }
+
+    @ParameterizedTest
+    @MethodSource("data_durationConversions")
+    public void test_durationFromBigDecimalSeconds(Duration expected, BigDecimal input, double ignored) {
+        Duration test = Temporals.durationFromBigDecimalSeconds(input);
+        assertEquals(expected, test);
+    }
+
+    @ParameterizedTest
+    @MethodSource("data_durationConversions")
+    public void test_durationToDoubleSeconds(Duration input, BigDecimal ignored, double expected) {
+        double test = Temporals.durationToDoubleSeconds(input);
+        assertEquals(expected, test, 0d);
+    }
+
+    @ParameterizedTest
+    @MethodSource("data_durationConversions")
+    public void test_durationFromDoubleSeconds(Duration expected, BigDecimal ignored, double input) {
+        Duration test = Temporals.durationFromDoubleSeconds(input);
+        assertEquals(expected, test);
+    }
+
+    @Test
+    public void test_durationFromBigDecimalSeconds_manyDecimals() {
+        Duration test = Temporals.durationFromBigDecimalSeconds(BigDecimal.valueOf(122233322251L, 11));
+        assertEquals(Duration.ofSeconds(1, 222333223), test);
+    }
+
+    @Test
+    public void test_durationFromDoubleSeconds_manyDecimals() {
+        Duration test = Temporals.durationFromDoubleSeconds(1.22233322251d);
+        assertEquals(Duration.ofSeconds(1, 222333223), test);
+    }
+
+    @Test
+    public void test_durationFromBigDecimalSeconds_tooLargePositive() {
+        Duration test = Temporals.durationFromBigDecimalSeconds(BigDecimal.valueOf(122233322251L, -10));
+        assertEquals(Duration.ofSeconds(Long.MAX_VALUE, 999_999_999), test);
+    }
+
+    @Test
+    public void test_durationFromBigDecimalSeconds_tooLargeNegative() {
+        Duration test = Temporals.durationFromBigDecimalSeconds(BigDecimal.valueOf(-122233322251L, -10));
+        assertEquals(Duration.ofSeconds(Long.MIN_VALUE), test);
+    }
+
+    @Test
+    public void test_durationFromDoubleSeconds_tooLargePositive() {
+        Duration test = Temporals.durationFromDoubleSeconds(122233322251e10);
+        assertEquals(Duration.ofSeconds(Long.MAX_VALUE, 999_999_999), test);
+    }
+
+    @Test
+    public void test_durationFromDoubleSeconds_tooLargeNegative() {
+        Duration test = Temporals.durationFromDoubleSeconds(-122233322251e10);
+        assertEquals(Duration.ofSeconds(Long.MIN_VALUE), test);
+    }
+
+    //-----------------------------------------------------------------------
+    // duration multiply
+    //-------------------------------------------------------------------------
+    public static Object[][] data_durationMultiply() {
+        return new Object[][] {
+            {Duration.ZERO, 0d, Duration.ZERO},
+            {Duration.ZERO, 1d, Duration.ZERO},
+            {Duration.ZERO, 2d, Duration.ZERO},
+            {Duration.ofSeconds(1, 0), 0d, Duration.ZERO},
+            {Duration.ofSeconds(1, 0), -0d, Duration.ZERO},
+            {Duration.ofSeconds(1, 0), 1d, Duration.ofSeconds(1, 0)},
+            {Duration.ofSeconds(1, 0), 2d, Duration.ofSeconds(2, 0)},
+            {Duration.ofSeconds(1, 500_000_000), 2d, Duration.ofSeconds(3, 0)},
+            {Duration.ofSeconds(1, 0), 1e-12, Duration.ofNanos(1)},
+            {Duration.ofNanos(1), 1e-12, Duration.ofNanos(1)},
+            {Duration.ofSeconds(Long.MAX_VALUE - 1, 0), 1.1d, Duration.ofSeconds(Long.MAX_VALUE, 999_999_999)},
+            {Duration.ofSeconds(Long.MAX_VALUE - 1, 0), -1.1d, Duration.ofSeconds(Long.MIN_VALUE, 0)},
+        };
+    }
+
+    @ParameterizedTest
+    @MethodSource("data_durationMultiply")
+    public void test_durationMultiply(Duration input, double multiplicand, Duration expected) {
+        Duration test = Temporals.multiply(input, multiplicand);
+        assertEquals(expected, test);
     }
 
 }

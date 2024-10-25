@@ -48,6 +48,9 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
+
 /**
  * A week-based amount of time, such as '12 weeks'.
  * <p>
@@ -173,11 +176,12 @@ public final class Weeks
      * @return the parsed period, not null
      * @throws DateTimeParseException if the text cannot be parsed to a period
      */
+    @FromString
     public static Weeks parse(CharSequence text) {
         Objects.requireNonNull(text, "text");
         Matcher matcher = PATTERN.matcher(text);
         if (matcher.matches()) {
-            int negate = ("-".equals(matcher.group(1)) ? -1 : 1);
+            int negate = "-".equals(matcher.group(1)) ? -1 : 1;
             String str = matcher.group(2);
             try {
                 int val = Integer.parseInt(str);
@@ -237,7 +241,7 @@ public final class Weeks
      */
     @Override
     public long get(TemporalUnit unit) {
-        if (unit == ChronoUnit.WEEKS) {
+        if (unit == WEEKS) {
             return weeks;
         }
         throw new UnsupportedTemporalTypeException("Unsupported unit: " + unit);
@@ -266,6 +270,33 @@ public final class Weeks
      */
     public int getAmount() {
         return weeks;
+    }
+
+    /**
+     * Checks if the amount is negative.
+     *
+     * @return true if the amount is negative, false if the amount is zero or positive
+     */
+    public boolean isNegative() {
+        return getAmount() < 0;
+    }
+
+    /**
+     * Checks if the amount is zero.
+     *
+     * @return true if the amount is zero, false if not
+     */
+    public boolean isZero() {
+        return getAmount() == 0;
+    }
+
+    /**
+     * Checks if the amount is positive.
+     *
+     * @return true if the amount is positive, false if the amount is zero or negative
+     */
+    public boolean isPositive() {
+        return getAmount() > 0;
     }
 
     //-----------------------------------------------------------------------
@@ -309,13 +340,13 @@ public final class Weeks
      * <p>
      * This instance is immutable and unaffected by this method call.
      *
-     * @param amountToAdd  the amount to add, not null
+     * @param amountToSubtract  the amount to subtract, not null
      * @return a {@code Weeks} based on this instance with the requested amount subtracted, not null
      * @throws DateTimeException if the specified amount contains an invalid unit
      * @throws ArithmeticException if numeric overflow occurs
      */
-    public Weeks minus(TemporalAmount amountToAdd) {
-        return minus(Weeks.from(amountToAdd).getAmount());
+    public Weeks minus(TemporalAmount amountToSubtract) {
+        return minus(Weeks.from(amountToSubtract).getAmount());
     }
 
     /**
@@ -530,6 +561,7 @@ public final class Weeks
      * @return the number of weeks in ISO-8601 string format
      */
     @Override
+    @ToString
     public String toString() {
         return "P" + weeks + "W";
     }

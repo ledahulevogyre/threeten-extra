@@ -5,7 +5,6 @@
   <property name="severity" value="warning"/>
   <module name="TreeWalker">
     <property name="tabWidth" value="4"/>
-    <module name="FileContentsHolder"/>
     <module name="ConstantName">
       <property name="format" value="^[A-Z][A-Z0-9]*(_[A-Z0-9]+)*$|^[a-z][a-zA-Z0-9]*$"/>
     </module>
@@ -31,23 +30,12 @@
     </module>
     <module name="JavadocMethod">
       <property name="scope" value="protected"/>
-      <property name="allowUndeclaredRTE" value="true"/>
-      <property name="allowMissingThrowsTags" value="true"/>
-      <property name="allowMissingJavadoc" value="true"/>
-      <property name="allowMissingPropertyJavadoc" value="true"/>
-      <property name="logLoadErrors" value="true"/>
-      <property name="suppressLoadErrors" value="true"/>
     </module>
     <module name="JavadocVariable">
       <property name="scope" value="protected"/>
     </module>
     <module name="LeftCurly">
       <property name="severity" value="error"/>
-    </module>
-    <module name="LineLength">
-      <property name="ignorePattern" value="^ *\* *[^ ]+$"/>
-      <property name="max" value="200"/>
-      <property name="tabWidth" value="2"/>
     </module>
     <module name="LocalFinalVariableName"/>
     <module name="LocalVariableName"/>
@@ -60,6 +48,9 @@
     <module name="MethodName"/>
     <module name="ModifierOrder">
       <property name="severity" value="error"/>
+    </module>
+    <module name="MissingJavadocMethodCheck">
+      <property name="allowMissingPropertyJavadoc" value="true"/>
     </module>
     <module name="NeedBraces">
       <property name="severity" value="error"/>
@@ -118,25 +109,34 @@
       <property name="basicOffset" value="4"/>
       <property name="caseIndent" value="4"/>
     </module>
+    <module name="SuppressWithNearbyCommentFilter">
+      <property name="commentFormat" value="CSIGNORE"/>
+      <property name="checkFormat" value=".*"/>
+      <property name="checkC" value="false"/>
+    </module>
+    <module name="SuppressionCommentFilter">
+      <!-- Joda-Beans does not conform to these rules so just ignore generated code -->
+      <property name="offCommentFormat" value="CSOFF"/>
+      <property name="onCommentFormat" value="CSON"/>
+      <property name="checkCPP" value="true"/>
+      <property name="checkC" value="false"/>
+    </module>
   </module>
   <!-- Header inlined due to m2e -->
   <module name="RegexpHeader">
     <property name="header" value="^/\*[*]?\n^ \* Copyright [(]c[)] 2007[-]present[,] Stephen Colebourne [&amp;] Michael Nascimento Santos"/>
     <property name="fileExtensions" value="java"/>
   </module>
-  <module name="SuppressionCommentFilter">
-    <property name="offCommentFormat" value="CSOFF"/>
-    <property name="onCommentFormat" value="CSON"/>
-  </module>
   <module name="FileLength"/>
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>
     <property name="severity" value="error"/>
   </module>
-  <module name="NewlineAtEndOfFile"/>
-  <module name="SuppressWithNearbyCommentFilter">
-    <property name="commentFormat" value="CSIGNORE"/>
-    <property name="checkFormat" value=".*"/>
-    <property name="checkC" value="false"/>
+  <module name="LineLength">
+    <property name="fileExtensions" value="java"/>
+    <property name="ignorePattern" value="^ *\* *[^ ]+$"/>
+    <property name="max" value="200"/>
+    <property name="tabWidth" value="2"/>
   </module>
+  <module name="NewlineAtEndOfFile"/>
 </module>

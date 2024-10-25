@@ -255,6 +255,8 @@ public final class JulianDate
             case 11:
                 day = Math.min(day, 30);
                 break;
+            default:
+                break;
         }
         return new JulianDate(prolepticYear, month, day);
     }
@@ -284,6 +286,8 @@ public final class JulianDate
                 case 9:
                 case 11:
                     dom = 30;
+                    break;
+                default:
                     break;
             }
             if (dayOfMonth > dom) {
@@ -437,7 +441,7 @@ public final class JulianDate
     @Override  // for covariant return type
     @SuppressWarnings("unchecked")
     public ChronoLocalDateTime<JulianDate> atTime(LocalTime localTime) {
-        return (ChronoLocalDateTime<JulianDate>) ChronoLocalDate.super.atTime(localTime);
+        return (ChronoLocalDateTime<JulianDate>) super.atTime(localTime);
     }
 
     @Override

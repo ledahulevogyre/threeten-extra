@@ -71,6 +71,11 @@ import java.time.temporal.TemporalUnit;
 import java.time.temporal.UnsupportedTemporalTypeException;
 import java.time.temporal.ValueRange;
 import java.util.Objects;
+import java.util.stream.LongStream;
+import java.util.stream.Stream;
+
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
 
 /**
  * A year-quarter in the ISO-8601 calendar system, such as {@code 2007-Q2}.
@@ -176,6 +181,29 @@ public final class YearQuarter
     /**
      * Obtains an instance of {@code YearQuarter} from a year and quarter.
      *
+     * @param year  the year to represent, not null
+     * @param quarter  the quarter-of-year to represent, not null
+     * @return the year-quarter, not null
+     */
+    public static YearQuarter of(Year year, Quarter quarter) {
+        return of(year.getValue(), quarter);
+    }
+
+    /**
+     * Obtains an instance of {@code YearQuarter} from a year and quarter.
+     *
+     * @param year  the year to represent, not null
+     * @param quarter  the quarter-of-year to represent, from 1 to 4
+     * @return the year-quarter, not null
+     * @throws DateTimeException if the quarter value is invalid
+     */
+    public static YearQuarter of(Year year, int quarter) {
+        return of(year.getValue(), Quarter.of(quarter));
+    }
+
+    /**
+     * Obtains an instance of {@code YearQuarter} from a year and quarter.
+     *
      * @param year  the year to represent, from MIN_YEAR to MAX_YEAR
      * @param quarter  the quarter-of-year to represent, not null
      * @return the year-quarter, not null
@@ -226,10 +254,12 @@ public final class YearQuarter
         }
         Objects.requireNonNull(temporal, "temporal");
         try {
-            if (IsoChronology.INSTANCE.equals(Chronology.from(temporal)) == false) {
-                temporal = LocalDate.from(temporal);
-            }
-            return of(temporal.get(YEAR), temporal.get(QUARTER_OF_YEAR));
+            TemporalAccessor adjusted =
+                    !IsoChronology.INSTANCE.equals(Chronology.from(temporal)) ? LocalDate.from(temporal) : temporal;
+            // need to use getLong() as JDK Parsed class get() doesn't work properly
+            int year = Math.toIntExact(adjusted.getLong(YEAR));
+            int qoy = Math.toIntExact(adjusted.getLong(QUARTER_OF_YEAR));
+            return of(year, qoy);
         } catch (DateTimeException ex) {
             throw new DateTimeException("Unable to obtain YearQuarter from TemporalAccessor: " +
                     temporal + " of type " + temporal.getClass().getName(), ex);
@@ -248,6 +278,7 @@ public final class YearQuarter
      * @return the parsed year-quarter, not null
      * @throws DateTimeParseException if the text cannot be parsed
      */
+    @FromString
     public static YearQuarter parse(CharSequence text) {
         return parse(text, PARSER);
     }
@@ -343,7 +374,7 @@ public final class YearQuarter
     /**
      * Checks if the specified unit is supported.
      * <p>
-     * This checks if the specified unit can be added to, or subtracted from, this date-time.
+     * This checks if the specified unit can be added to, or subtracted from, this year-quarter.
      * If false, then calling the {@link #plus(long, TemporalUnit)} and
      * {@link #minus(long, TemporalUnit) minus} methods will throw an exception.
      * <p>
@@ -403,6 +434,9 @@ public final class YearQuarter
      */
     @Override
     public ValueRange range(TemporalField field) {
+        if (field == QUARTER_OF_YEAR) {
+            return QUARTER_OF_YEAR.range();
+        }
         if (field == YEAR_OF_ERA) {
             return (getYear() <= 0 ? ValueRange.of(1, Year.MAX_VALUE + 1) : ValueRange.of(1, Year.MAX_VALUE));
         }
@@ -437,6 +471,20 @@ public final class YearQuarter
      */
     @Override
     public int get(TemporalField field) {
+        if (field == QUARTER_OF_YEAR) {
+            return quarter.getValue();
+        } else if (field instanceof ChronoField) {
+            switch ((ChronoField) field) {
+                case YEAR_OF_ERA:
+                    return (year < 1 ? 1 - year : year);
+                case YEAR:
+                    return year;
+                case ERA:
+                    return (year < 1 ? 0 : 1);
+                default:
+                    throw new UnsupportedTemporalTypeException("Unsupported field: " + field);
+            }
+        }
         return Temporal.super.get(field);
     }
 
@@ -591,7 +639,7 @@ public final class YearQuarter
     /**
      * Returns an adjusted copy of this year-quarter.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the year-quarter adjusted.
+     * This returns a {@code YearQuarter} based on this one, with the year-quarter adjusted.
      * The adjustment takes place using the specified adjuster strategy object.
      * Read the documentation of the adjuster to understand what adjustment will be made.
      * <p>
@@ -618,7 +666,7 @@ public final class YearQuarter
     /**
      * Returns a copy of this year-quarter with the specified field set to a new value.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the value
+     * This returns a {@code YearQuarter} based on this one, with the value
      * for the specified field changed.
      * This can be used to change any supported field, such as the year or quarter.
      * If it is not possible to set the value, because the field is not supported or for
@@ -714,7 +762,7 @@ public final class YearQuarter
     /**
      * Returns a copy of this year-quarter with the specified amount added.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the specified amount added.
+     * This returns a {@code YearQuarter} based on this one, with the specified amount added.
      * The amount is typically {@link Period} but may be any other type implementing
      * the {@link TemporalAmount} interface.
      * <p>
@@ -739,7 +787,7 @@ public final class YearQuarter
     /**
      * Returns a copy of this year-quarter with the specified amount added.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the amount
+     * This returns a {@code YearQuarter} based on this one, with the amount
      * in terms of the unit added. If it is not possible to add the amount, because the
      * unit is not supported or for some other reason, an exception is thrown.
      * <p>
@@ -843,7 +891,7 @@ public final class YearQuarter
         long quarterCount = year * 4L + (quarter.getValue() - 1);
         long calcQuarters = quarterCount + quartersToAdd;  // safe overflow
         int newYear = YEAR.checkValidIntValue(Math.floorDiv(calcQuarters, 4));
-        int newQuarter = (int) Math.floorMod(calcQuarters, 4) + 1;
+        int newQuarter = (int) Math.floorMod(calcQuarters, 4L) + 1;
         return with(newYear, Quarter.of(newQuarter));
     }
 
@@ -851,7 +899,7 @@ public final class YearQuarter
     /**
      * Returns a copy of this year-quarter with the specified amount subtracted.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the specified amount subtracted.
+     * This returns a {@code YearQuarter} based on this one, with the specified amount subtracted.
      * The amount is typically {@link Period} but may be any other type implementing
      * the {@link TemporalAmount} interface.
      * <p>
@@ -876,7 +924,7 @@ public final class YearQuarter
     /**
      * Returns a copy of this year-quarter with the specified amount subtracted.
      * <p>
-     * This returns a {@code YearQuarter}, based on this one, with the amount
+     * This returns a {@code YearQuarter} based on this one, with the amount
      * in terms of the unit subtracted. If it is not possible to subtract the amount,
      * because the unit is not supported or for some other reason, an exception is thrown.
      * <p>
@@ -1062,6 +1110,24 @@ public final class YearQuarter
     }
 
     /**
+     * Returns a sequential ordered stream of year-quarter. The returned stream starts from this year-quarter
+     * (inclusive) and goes to {@code endExclusive} (exclusive) by an incremental step of 1 {@code QUARTER_YEARS}.
+     * <p>
+     * This instance is immutable and unaffected by this method call.
+     * 
+     * @param endExclusive  the end year-quarter, exclusive, not null
+     * @return a sequential {@code Stream} for the range of {@code YearQuarter} values
+     * @throws IllegalArgumentException if end year-quarter is before this year-quarter
+     */
+    public Stream<YearQuarter> quartersUntil(YearQuarter endExclusive) {
+        if (endExclusive.isBefore(this)) {
+            throw new IllegalArgumentException(endExclusive + " < " + this);
+        }
+        long intervalLength = until(endExclusive, QUARTER_YEARS);
+        return LongStream.range(0, intervalLength).mapToObj(n -> plusQuarters(n));
+    }
+
+    /**
      * Formats this year-quarter using the specified formatter.
      * <p>
      * This year-quarter will be passed to the formatter to produce a string.
@@ -1097,11 +1163,12 @@ public final class YearQuarter
         ValueRange.of(1, lengthOfQuarter()).checkValidValue(dayOfQuarter, DAY_OF_QUARTER);
         boolean leap = Year.isLeap(year);
         Month month = quarter.firstMonth();
-        while (dayOfQuarter > month.length(leap)) {
-            dayOfQuarter -= month.length(leap);
+        int dom = dayOfQuarter;
+        while (dom > month.length(leap)) {
+            dom -= month.length(leap);
             month = month.plus(1);
         }
-        return LocalDate.of(year, month, dayOfQuarter);
+        return LocalDate.of(year, month, dom);
     }
 
     /**
@@ -1202,6 +1269,7 @@ public final class YearQuarter
      * @return a string representation of this year-quarter, not null
      */
     @Override
+    @ToString
     public String toString() {
         int absYear = Math.abs(year);
         StringBuilder buf = new StringBuilder(10);

@@ -72,7 +72,7 @@ import java.time.temporal.ValueRange;
  * The Pax differs from the Gregorian in terms of month count and length, and the leap year rule.
  * Dates are aligned such that {@code 0001-01-01 (Pax)} is {@code 0000-12-31 (ISO)}.
  * <p>
- * More information is available in the <a href="http://en.wikipedia.org/wiki/Pax_Calendar">Pax Calendar</a> Wikipedia article.
+ * More information is available in the <a href="https://en.wikipedia.org/wiki/Pax_Calendar">Pax Calendar</a> Wikipedia article.
  *
  * <h3>Implementation Requirements</h3>
  * This class is immutable and thread-safe.
@@ -347,11 +347,6 @@ public final class PaxDate
     private static long getLeapMonthsBefore(long prolepticMonth) {
         long offsetMonth = prolepticMonth - (prolepticMonth <= 0 ? 13 : 13 - 1);
         // First, see getLeapYearsBefore(...) for explanations.
-        // return 18 * Math.floorDiv(offsetMonth, 100 * MONTHS_IN_YEAR + (getLeapYearsBefore(100) + 1))
-        // - Math.floorDiv(offsetMonth, 400 * MONTHS_IN_YEAR + (getLeapYearsBefore(400) + 1))
-        // + (((Math.floorMod(offsetMonth, 100 * MONTHS_IN_YEAR + (getLeapYearsBefore(100) + 1)) - (offsetMonth <= 0 ? 100 * MONTHS_IN_YEAR + getLeapYearsBefore(100) : 0))
-        // / (99 * MONTHS_IN_YEAR + (getLeapYearsBefore(99) + 1))) + (offsetMonth <= 0 ? 1 : 0))
-        // + (Math.floorMod(offsetMonth, 100 * MONTHS_IN_YEAR + (getLeapYearsBefore(100) + 1)) + (offsetMonth <= 0 ? 2 * MONTHS_IN_YEAR - 1 : 0)) / (6 * MONTHS_IN_YEAR + 1);
         return 18L * Math.floorDiv(offsetMonth, 1318)
                 - Math.floorDiv(offsetMonth, 5272)
                 + (((Math.floorMod(offsetMonth, 1318) - (offsetMonth <= 0 ? 1317 : 0)) / 1304) + (offsetMonth <= 0 ? 1 : 0))
@@ -622,7 +617,7 @@ public final class PaxDate
     @Override  // for covariant return type
     @SuppressWarnings("unchecked")
     public ChronoLocalDateTime<PaxDate> atTime(LocalTime localTime) {
-        return (ChronoLocalDateTime<PaxDate>) ChronoLocalDate.super.atTime(localTime);
+        return (ChronoLocalDateTime<PaxDate>) super.atTime(localTime);
     }
 
     @Override

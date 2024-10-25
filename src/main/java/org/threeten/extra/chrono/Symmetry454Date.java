@@ -91,8 +91,8 @@ import java.time.temporal.ValueRange;
  * The 13th day of a month is always a Saturday.
  * <p>
  * More information is available on Wikipedia at
- * <a href='https://http://en.wikipedia.org/wiki/Symmetry454'>Symmetry454</a> or on the calendar's
- * <a href='http://individual.utoronto.ca/kalendis/symmetry.htm'>home page</a>.
+ * <a href='https://en.wikipedia.org/wiki/Symmetry454'>Symmetry454</a> or on the calendar's
+ * <a href='https://individual.utoronto.ca/kalendis/symmetry.htm'>home page</a>.
  * <p>
  *
  * <h3>Implementation Requirements</h3>
@@ -593,7 +593,7 @@ public final class Symmetry454Date
     @Override  // for covariant return type
     @SuppressWarnings("unchecked")
     public ChronoLocalDateTime<Symmetry454Date> atTime(LocalTime localTime) {
-        return (ChronoLocalDateTime<Symmetry454Date>) ChronoLocalDate.super.atTime(localTime);
+        return (ChronoLocalDateTime<Symmetry454Date>) super.atTime(localTime);
     }
 
     @Override

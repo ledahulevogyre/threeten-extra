@@ -31,9 +31,11 @@
  */
 package org.threeten.extra;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertSame;
-import static org.testng.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -42,109 +44,138 @@ import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.time.DateTimeException;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.IsoFields;
+import java.time.temporal.Temporal;
 import java.time.temporal.TemporalAmount;
 
-import org.testng.annotations.DataProvider;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import com.google.common.testing.EqualsTester;
 
 /**
  * Test class.
  */
-@Test
 public class TestYears {
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_isSerializable() {
         assertTrue(Serializable.class.isAssignableFrom(Years.class));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_deserializationSingleton() throws Exception {
-        Years orginal = Years.ZERO;
+        Years test = Years.ZERO;
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream out = new ObjectOutputStream(baos);
-        out.writeObject(orginal);
-        out.close();
-        ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-        ObjectInputStream in = new ObjectInputStream(bais);
-        Years ser = (Years) in.readObject();
-        assertSame(Years.ZERO, ser);
+        try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+            oos.writeObject(test);
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()))) {
+            assertSame(test, ois.readObject());
+        }
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_ZERO() {
-        assertSame(Years.of(0), Years.ZERO);
-        assertSame(Years.of(0), Years.ZERO);
-        assertEquals(Years.ZERO.getAmount(), 0);
+        assertSame(Years.ZERO, Years.of(0));
+        assertEquals(Years.ZERO, Years.of(0));
+        assertEquals(0, Years.ZERO.getAmount());
+        assertFalse(Years.ZERO.isNegative());
+        assertTrue(Years.ZERO.isZero());
+        assertFalse(Years.ZERO.isPositive());
     }
 
+    @Test
     public void test_ONE() {
-        assertSame(Years.of(1), Years.ONE);
-        assertSame(Years.of(1), Years.ONE);
-        assertEquals(Years.ONE.getAmount(), 1);
+        assertSame(Years.ONE, Years.of(1));
+        assertEquals(Years.ONE, Years.of(1));
+        assertEquals(1, Years.ONE.getAmount());
+        assertFalse(Years.ONE.isNegative());
+        assertFalse(Years.ONE.isZero());
+        assertTrue(Years.ONE.isPositive());
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_of() {
-        assertEquals(Years.of(1).getAmount(), 1);
-        assertEquals(Years.of(2).getAmount(), 2);
-        assertEquals(Years.of(Integer.MAX_VALUE).getAmount(), Integer.MAX_VALUE);
-        assertEquals(Years.of(-1).getAmount(), -1);
-        assertEquals(Years.of(-2).getAmount(), -2);
-        assertEquals(Years.of(Integer.MIN_VALUE).getAmount(), Integer.MIN_VALUE);
+        assertEquals(1, Years.of(1).getAmount());
+        assertEquals(2, Years.of(2).getAmount());
+        assertEquals(Integer.MAX_VALUE, Years.of(Integer.MAX_VALUE).getAmount());
+        assertEquals(-1, Years.of(-1).getAmount());
+        assertEquals(-2, Years.of(-2).getAmount());
+        assertEquals(Integer.MIN_VALUE, Years.of(Integer.MIN_VALUE).getAmount());
+    }
+
+    @Test
+    public void test_ofMinusOne() {
+        assertEquals(-1, Years.of(-1).getAmount());
+        assertTrue(Years.of(-1).isNegative());
+        assertFalse(Years.of(-1).isZero());
+        assertFalse(Years.of(-1).isPositive());
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_from_P0Y() {
-        assertEquals(Years.from(Period.ofYears(0)), Years.of(0));
+        assertEquals(Years.of(0), Years.from(Period.ofYears(0)));
     }
 
+    @Test
     public void test_from_P2Y() {
-        assertEquals(Years.from(Period.ofYears(2)), Years.of(2));
+        assertEquals(Years.of(2), Years.from(Period.ofYears(2)));
     }
 
+    @Test
     public void test_from_P24M() {
-        assertEquals(Years.from(Period.ofMonths(24)), Years.of(2));
+        assertEquals(Years.of(2), Years.from(Period.ofMonths(24)));
     }
 
+    @Test
     public void test_from_yearsAndMonths() {
-        assertEquals(Years.from(Period.of(3, 24, 0)), Years.of(5));
+        assertEquals(Years.of(5), Years.from(Period.of(3, 24, 0)));
     }
 
+    @Test
     public void test_from_decadesAndMonths() {
-        assertEquals(Years.from(new MockDecadesMonths(2, -12)), Years.of(19));
+        assertEquals(Years.of(19), Years.from(new MockDecadesMonths(2, -12)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_from_wrongUnit_remainder() {
-        Years.from(Period.ofMonths(3));
+        assertThrows(DateTimeException.class, () -> Years.from(Period.ofMonths(3)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_from_wrongUnit_noConversion() {
-        Years.from(Period.ofDays(2));
+        assertThrows(DateTimeException.class, () -> Years.from(Period.ofDays(2)));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_from_null() {
-        Years.from((TemporalAmount) null);
+        assertThrows(NullPointerException.class, () -> Years.from((TemporalAmount) null));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_parse_CharSequence() {
-        assertEquals(Years.parse("P0Y"), Years.of(0));
-        assertEquals(Years.parse("P1Y"), Years.of(1));
-        assertEquals(Years.parse("P2Y"), Years.of(2));
-        assertEquals(Years.parse("P123456789Y"), Years.of(123456789));
-        assertEquals(Years.parse("P-2Y"), Years.of(-2));
-        assertEquals(Years.parse("-P2Y"), Years.of(-2));
-        assertEquals(Years.parse("-P-2Y"), Years.of(2));
+        assertEquals(Years.of(0), Years.parse("P0Y"));
+        assertEquals(Years.of(1), Years.parse("P1Y"));
+        assertEquals(Years.of(2), Years.parse("P2Y"));
+        assertEquals(Years.of(123456789), Years.parse("P123456789Y"));
+        assertEquals(Years.of(-2), Years.parse("P-2Y"));
+        assertEquals(Years.of(-2), Years.parse("-P2Y"));
+        assertEquals(Years.of(2), Years.parse("-P-2Y"));
     }
 
-    @DataProvider(name = "parseInvalid")
-    Object[][] data_invalid() {
+    public static Object[][] data_invalid() {
         return new Object[][] {
             {"P3M"},
             {"P3W"},
@@ -160,17 +191,46 @@ public class TestYears {
         };
     }
 
-    @Test(expectedExceptions = DateTimeParseException.class, dataProvider = "parseInvalid")
+    @ParameterizedTest
+    @MethodSource("data_invalid")
     public void test_parse_CharSequence_invalid(String str) {
-        Years.parse(str);
+        assertThrows(DateTimeParseException.class, () -> Years.parse(str));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_parse_CharSequence_null() {
-        Years.parse((CharSequence) null);
+        assertThrows(NullPointerException.class, () -> Years.parse((CharSequence) null));
     }
 
     //-----------------------------------------------------------------------
+    @Test
+    public void test_between() {
+        assertEquals(Years.of(2), Years.between(LocalDate.of(2019, 1, 1), LocalDate.of(2021, 1, 1)));
+    }
+
+    @Test
+    public void test_between_date_null() {
+        assertThrows(NullPointerException.class, () -> Years.between(LocalDate.now(), (Temporal) null));
+    }
+
+    @Test
+    public void test_between_null_date() {
+        assertThrows(NullPointerException.class, () -> Years.between((Temporal) null, LocalDate.now()));
+    }
+
+    //-----------------------------------------------------------------------
+    @Test
+    public void test_get() {
+        assertEquals(6, Years.of(6).get(ChronoUnit.YEARS));
+    }
+
+    @Test
+    public void test_get_invalidType() {
+        assertThrows(DateTimeException.class, () -> Years.of(6).get(IsoFields.QUARTER_YEARS));
+    }
+
+    //-----------------------------------------------------------------------
+    @Test
     public void test_plus_TemporalAmount_Years() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.plus(Years.of(0)));
@@ -180,6 +240,7 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).plus(Years.of(-1)));
     }
 
+    @Test
     public void test_plus_TemporalAmount_Period() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.plus(Period.ofYears(0)));
@@ -189,32 +250,33 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).plus(Period.ofYears(-1)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_plus_TemporalAmount_PeriodMonths() {
-        Years.of(1).plus(Period.ofMonths(2));
+        assertThrows(DateTimeException.class, () -> Years.of(1).plus(Period.ofMonths(2)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_plus_TemporalAmount_Duration() {
-        Years.of(1).plus(Duration.ofHours(2));
+        assertThrows(DateTimeException.class, () -> Years.of(1).plus(Duration.ofHours(2)));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_plus_TemporalAmount_overflowTooBig() {
-        Years.of(Integer.MAX_VALUE - 1).plus(Years.of(2));
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MAX_VALUE - 1).plus(Years.of(2)));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_plus_TemporalAmount_overflowTooSmall() {
-        Years.of(Integer.MIN_VALUE + 1).plus(Years.of(-2));
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE + 1).plus(Years.of(-2)));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_plus_TemporalAmount_null() {
-        Years.of(Integer.MIN_VALUE + 1).plus(null);
+        assertThrows(NullPointerException.class, () -> Years.of(Integer.MIN_VALUE + 1).plus(null));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_plus_int() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.plus(0));
@@ -224,17 +286,18 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).plus(-1));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_plus_int_overflowTooBig() {
-        Years.of(Integer.MAX_VALUE - 1).plus(2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MAX_VALUE - 1).plus(2));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_plus_int_overflowTooSmall() {
-        Years.of(Integer.MIN_VALUE + 1).plus(-2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE + 1).plus(-2));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_minus_TemporalAmount_Years() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.minus(Years.of(0)));
@@ -244,6 +307,7 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).minus(Years.of(1)));
     }
 
+    @Test
     public void test_minus_TemporalAmount_Period() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.minus(Period.ofYears(0)));
@@ -253,32 +317,33 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).minus(Period.ofYears(1)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_minus_TemporalAmount_PeriodMonths() {
-        Years.of(1).minus(Period.ofMonths(2));
+        assertThrows(DateTimeException.class, () -> Years.of(1).minus(Period.ofMonths(2)));
     }
 
-    @Test(expectedExceptions = DateTimeException.class)
+    @Test
     public void test_minus_TemporalAmount_Duration() {
-        Years.of(1).minus(Duration.ofHours(2));
+        assertThrows(DateTimeException.class, () -> Years.of(1).minus(Duration.ofHours(2)));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_minus_TemporalAmount_overflowTooBig() {
-        Years.of(Integer.MAX_VALUE - 1).minus(Years.of(-2));
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MAX_VALUE - 1).minus(Years.of(-2)));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_minus_TemporalAmount_overflowTooSmall() {
-        Years.of(Integer.MIN_VALUE + 1).minus(Years.of(2));
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE + 1).minus(Years.of(2)));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_minus_TemporalAmount_null() {
-        Years.of(Integer.MIN_VALUE + 1).minus(null);
+        assertThrows(NullPointerException.class, () -> Years.of(Integer.MIN_VALUE + 1).minus(null));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_minus_int() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(5), test5.minus(0));
@@ -288,17 +353,18 @@ public class TestYears {
         assertEquals(Years.of(Integer.MIN_VALUE), Years.of(Integer.MIN_VALUE + 1).minus(1));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_minus_int_overflowTooBig() {
-        Years.of(Integer.MAX_VALUE - 1).minus(-2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MAX_VALUE - 1).minus(-2));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_minus_int_overflowTooSmall() {
-        Years.of(Integer.MIN_VALUE + 1).minus(2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE + 1).minus(2));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_multipliedBy() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(0), test5.multipliedBy(0));
@@ -308,22 +374,24 @@ public class TestYears {
         assertEquals(Years.of(-15), test5.multipliedBy(-3));
     }
 
+    @Test
     public void test_multipliedBy_negate() {
         Years test5 = Years.of(5);
         assertEquals(Years.of(-15), test5.multipliedBy(-3));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_multipliedBy_overflowTooBig() {
-        Years.of(Integer.MAX_VALUE / 2 + 1).multipliedBy(2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MAX_VALUE / 2 + 1).multipliedBy(2));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_multipliedBy_overflowTooSmall() {
-        Years.of(Integer.MIN_VALUE / 2 - 1).multipliedBy(2);
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE / 2 - 1).multipliedBy(2));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_dividedBy() {
         Years test12 = Years.of(12);
         assertEquals(Years.of(12), test12.dividedBy(1));
@@ -335,17 +403,19 @@ public class TestYears {
         assertEquals(Years.of(-4), test12.dividedBy(-3));
     }
 
+    @Test
     public void test_dividedBy_negate() {
         Years test12 = Years.of(12);
         assertEquals(Years.of(-4), test12.dividedBy(-3));
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_dividedBy_divideByZero() {
-        Years.of(1).dividedBy(0);
+        assertThrows(ArithmeticException.class, () -> Years.of(1).dividedBy(0));
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_negated() {
         assertEquals(Years.of(0), Years.of(0).negated());
         assertEquals(Years.of(-12), Years.of(12).negated());
@@ -353,12 +423,13 @@ public class TestYears {
         assertEquals(Years.of(-Integer.MAX_VALUE), Years.of(Integer.MAX_VALUE).negated());
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_negated_overflow() {
-        Years.of(Integer.MIN_VALUE).negated();
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE).negated());
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_abs() {
         assertEquals(Years.of(0), Years.of(0).abs());
         assertEquals(Years.of(12), Years.of(12).abs());
@@ -367,19 +438,34 @@ public class TestYears {
         assertEquals(Years.of(Integer.MAX_VALUE), Years.of(-Integer.MAX_VALUE).abs());
     }
 
-    @Test(expectedExceptions = ArithmeticException.class)
+    @Test
     public void test_abs_overflow() {
-        Years.of(Integer.MIN_VALUE).abs();
+        assertThrows(ArithmeticException.class, () -> Years.of(Integer.MIN_VALUE).abs());
     }
 
     //-----------------------------------------------------------------------
+    @Test
+    public void test_addTo() {
+        assertEquals(LocalDate.of(2019, 1, 10), Years.of(0).addTo(LocalDate.of(2019, 1, 10)));
+        assertEquals(LocalDate.of(2024, 1, 10), Years.of(5).addTo(LocalDate.of(2019, 1, 10)));
+    }
+
+    @Test
+    public void test_subtractFrom() {
+        assertEquals(LocalDate.of(2019, 1, 10), Years.of(0).subtractFrom(LocalDate.of(2019, 1, 10)));
+        assertEquals(LocalDate.of(2014, 1, 10), Years.of(5).subtractFrom(LocalDate.of(2019, 1, 10)));
+    }
+
+    //-----------------------------------------------------------------------
+    @Test
     public void test_toPeriod() {
         for (int i = -20; i < 20; i++) {
-            assertEquals(Years.of(i).toPeriod(), Period.ofYears(i));
+            assertEquals(Period.ofYears(i), Years.of(i).toPeriod());
         }
     }
 
     //-----------------------------------------------------------------------
+    @Test
     public void test_compareTo() {
         Years test5 = Years.of(5);
         Years test6 = Years.of(6);
@@ -388,40 +474,23 @@ public class TestYears {
         assertEquals(1, test6.compareTo(test5));
     }
 
-    @Test(expectedExceptions = NullPointerException.class)
+    @Test
     public void test_compareTo_null() {
         Years test5 = Years.of(5);
-        test5.compareTo(null);
+        assertThrows(NullPointerException.class, () -> test5.compareTo(null));
     }
 
     //-----------------------------------------------------------------------
-    public void test_equals() {
-        Years test5 = Years.of(5);
-        Years test6 = Years.of(6);
-        assertEquals(true, test5.equals(test5));
-        assertEquals(false, test5.equals(test6));
-        assertEquals(false, test6.equals(test5));
-    }
-
-    public void test_equals_null() {
-        Years test5 = Years.of(5);
-        assertEquals(false, test5.equals(null));
-    }
-
-    public void test_equals_otherClass() {
-        Years test5 = Years.of(5);
-        assertEquals(false, test5.equals(""));
+    @Test
+    public void test_equals_and_hashCode() {
+        new EqualsTester()
+            .addEqualityGroup(Years.of(0), Years.of(0))
+            .addEqualityGroup(Years.of(1), Years.of(1))
+            .testEquals();
     }
 
     //-----------------------------------------------------------------------
-    public void test_hashCode() {
-        Years test5 = Years.of(5);
-        Years test6 = Years.of(6);
-        assertEquals(true, test5.hashCode() == test5.hashCode());
-        assertEquals(false, test5.hashCode() == test6.hashCode());
-    }
-
-    //-----------------------------------------------------------------------
+    @Test
     public void test_toString() {
         Years test5 = Years.of(5);
         assertEquals("P5Y", test5.toString());

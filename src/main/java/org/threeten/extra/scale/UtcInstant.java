@@ -47,6 +47,9 @@ import java.time.format.DateTimeParseException;
 import java.time.temporal.JulianFields;
 import java.time.temporal.TemporalAccessor;
 
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
+
 /**
  * An instantaneous point on the time-line measured in the UTC time-scale
  * with leap seconds.
@@ -123,6 +126,10 @@ public final class UtcInstant
      * This is always positive and includes leap seconds.
      */
     private final long nanoOfDay;
+    /**
+     * A cache of the result from {@link #toString()} 
+     */
+    private transient String toString;
 
     //-----------------------------------------------------------------------
     /**
@@ -192,17 +199,18 @@ public final class UtcInstant
 
     //-------------------------------------------------------------------------
     /**
-     * Obtains an instance of {@code UtcInstant} from a text string
-     * {@code 2007-12-03T10:15:30.00Z}.
+     * Obtains an instance of {@code UtcInstant} from a text string,
+     * such as {@code 2007-12-03T10:15:30.00Z}.
      * <p>
      * The string must represent a valid instant in UTC and is parsed using
      * {@link DateTimeFormatter#ISO_INSTANT} with leap seconds handled.
      *
-     * @param text  the text to parse such as "12345.123456789s(TAI)", not null
+     * @param text  the text to parse such as "2007-12-03T10:15:30.00Z", not null
      * @return the parsed instant, not null
      * @throws DateTimeParseException if the text cannot be parsed
      * @throws DateTimeException if parsed text represents an invalid leap second
      */
+    @FromString
     public static UtcInstant parse(CharSequence text) {
         TemporalAccessor parsed = DateTimeFormatter.ISO_INSTANT.parse(text);
         long epochSecond = parsed.getLong(INSTANT_SECONDS);
@@ -302,7 +310,7 @@ public final class UtcInstant
      * @return true if this instant is within a leap second
      */
     public boolean isLeapSecond() {
-        return nanoOfDay > SECS_PER_DAY * NANOS_PER_SECOND;
+        return nanoOfDay >= SECS_PER_DAY * NANOS_PER_SECOND;
     }
 
     //-----------------------------------------------------------------------
@@ -418,6 +426,32 @@ public final class UtcInstant
         return Long.compare(nanoOfDay, otherInstant.nanoOfDay);
     }
 
+    /**
+     * Checks if this instant is after the specified instant.
+     * <p>
+     * The comparison is based on the time-line position of the instants.
+     *
+     * @param otherInstant  the other instant to compare to, not null
+     * @return true if this instant is after the specified instant
+     * @throws NullPointerException if otherInstant is null
+     */
+    public boolean isAfter(UtcInstant otherInstant) {
+        return compareTo(otherInstant) > 0;
+    }
+
+    /**
+     * Checks if this instant is before the specified instant.
+     * <p>
+     * The comparison is based on the time-line position of the instants.
+     *
+     * @param otherInstant  the other instant to compare to, not null
+     * @return true if this instant is before the specified instant
+     * @throws NullPointerException if otherInstant is null
+     */
+    public boolean isBefore(UtcInstant otherInstant) {
+        return compareTo(otherInstant) < 0;
+    }
+
     //-----------------------------------------------------------------------
     /**
      * Checks if this instant is equal to the specified {@code UtcInstant}.
@@ -461,8 +495,20 @@ public final class UtcInstant
      * @return a representation of this instant, not null
      */
     @Override
+    @ToString
     public String toString() {
-        LocalDate date = LocalDate.MAX.with(JulianFields.MODIFIED_JULIAN_DAY, mjDay);  // TODO: capacity/import issues
+        // racy single-check idiom
+        String currentStringValue = toString;
+        if (currentStringValue == null) {
+            currentStringValue = buildToString();
+            toString = currentStringValue;
+        }
+        return currentStringValue;
+    }
+
+    // produces the string representation of this instant
+    private String buildToString() {
+        LocalDate date = LocalDate.MAX.with(JulianFields.MODIFIED_JULIAN_DAY, mjDay); // TODO: capacity/import issues
         StringBuilder buf = new StringBuilder(30);
         int sod = (int) (nanoOfDay / NANOS_PER_SECOND);
         int hourValue = sod / (60 * 60);

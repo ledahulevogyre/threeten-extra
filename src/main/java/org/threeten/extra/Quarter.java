@@ -57,9 +57,8 @@ import java.util.Locale;
 /**
  * A quarter-of-year, such as 'Q2'.
  * <p>
- * {@code Quarter} is an enum representing the 4 quarters of the year -
- * Q1, Q2, Q3 and Q4. These are defined as January to March, April to June,
- * July to September and October to December.
+ * {@code Quarter} is an enum representing the 4 quarters of the year - Q1, Q2, Q3 and Q4.
+ * These are defined as January to March, April to June, July to September and October to December.
  * <p>
  * The {@code int} value follows the quarter, from 1 (Q1) to 4 (Q4).
  * It is recommended that applications use the enum rather than the {@code int} value
@@ -170,10 +169,11 @@ public enum Quarter implements TemporalAccessor, TemporalAdjuster {
             return of(month.ordinal() / 3 + 1);
         }
         try {
-            if (IsoChronology.INSTANCE.equals(Chronology.from(temporal)) == false) {
-                temporal = LocalDate.from(temporal);
-            }
-            return of(temporal.get(QUARTER_OF_YEAR));
+            TemporalAccessor adjusted =
+                    !IsoChronology.INSTANCE.equals(Chronology.from(temporal)) ? LocalDate.from(temporal) : temporal;
+            // need to use getLong() as JDK Parsed class get() doesn't work properly
+            int qoy = Math.toIntExact(adjusted.getLong(QUARTER_OF_YEAR));
+            return of(qoy);
         } catch (DateTimeException ex) {
             throw new DateTimeException("Unable to obtain Quarter from TemporalAccessor: " +
                     temporal + " of type " + temporal.getClass().getName(), ex);

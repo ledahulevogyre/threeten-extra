@@ -407,7 +407,7 @@ public final class AccountingDate extends AbstractDate implements ChronoLocalDat
     @Override
     public int lengthOfYear() {
         return (WEEKS_IN_YEAR + (isLeapYear() ? 1 : 0)) * DAYS_IN_WEEK;
-    };
+    }
 
     //-------------------------------------------------------------------------
     @Override
@@ -445,7 +445,7 @@ public final class AccountingDate extends AbstractDate implements ChronoLocalDat
     @Override  // for covariant return type
     @SuppressWarnings("unchecked")
     public ChronoLocalDateTime<AccountingDate> atTime(LocalTime localTime) {
-        return (ChronoLocalDateTime<AccountingDate>) ChronoLocalDate.super.atTime(localTime);
+        return (ChronoLocalDateTime<AccountingDate>) super.atTime(localTime);
     }
 
     @Override

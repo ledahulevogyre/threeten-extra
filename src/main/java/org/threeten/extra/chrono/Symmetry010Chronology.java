@@ -39,6 +39,7 @@ import java.time.ZoneId;
 import java.time.chrono.AbstractChronology;
 import java.time.chrono.ChronoLocalDateTime;
 import java.time.chrono.ChronoZonedDateTime;
+import java.time.chrono.Chronology;
 import java.time.chrono.Era;
 import java.time.chrono.IsoEra;
 import java.time.temporal.ChronoField;
@@ -72,7 +73,7 @@ import java.util.List;
  * <li>day-of-year - There are 364 days in a standard Symmetry010 year and 371 days in a leap year.
  *  The days are numbered accordingly.
  * <li>leap-year - Leap years occur every 5 or 6 years, evenly spread over 293 years according the formula:
- *     (52 > ((52 * year + 146) % 293)).
+ *     (52 &gt; ((52 * year + 146) % 293)).
  * <li>Week day - every year and every quarter starts on a Monday.
  *   In each quarter, the first month starts on a Monday, the second month on a Wednesday and the 3rd on a Saturday.
  *   There are no days outside of the week or month.
@@ -151,8 +152,6 @@ public final class Symmetry010Chronology
      * There are 6 full 293-year cycles from CE 1 to 1758, with 6 * 52 leap years, i.e. 312.
      * There are 37 leap years from CE 1758 to 1970.
      */
-    //public static final long DAYS_0001_TO_1970 = (DAYS_PER_CYCLE * 6L) + 211L * DAYS_IN_YEAR + 37 * DAYS_IN_WEEK;
-    //public static final long DAYS_0001_TO_1970_ISO = IsoChronology.INSTANCE.date(1,1,1).toEpochDay() * -1;
     public static final long DAYS_0001_TO_1970 = (146097 * 5L) - (31L * 365L + 7L) - 1;
     /**
      * Highest year in the range.
@@ -215,7 +214,7 @@ public final class Symmetry010Chronology
      * Gets the ID of the chronology - 'Sym010'.
      * <p>
      * The ID uniquely identifies the {@code Chronology}.
-     * It can be used to lookup the {@code Chronology} using {@link #of(String)}.
+     * It can be used to lookup the {@code Chronology} using {@link Chronology#of(String)}.
      *
      * @return the chronology ID - 'Sym010'
      * @see #getCalendarType()
@@ -498,10 +497,7 @@ public final class Symmetry010Chronology
         if (!(era instanceof IsoEra)) {
             throw new ClassCastException("Invalid era: " + era);
         }
-
-        YEAR_RANGE.checkValidIntValue(yearOfEra, ChronoField.YEAR_OF_ERA);
-
-        return yearOfEra;
+        return YEAR_RANGE.checkValidIntValue(yearOfEra, ChronoField.YEAR_OF_ERA);
     }
 
     /**

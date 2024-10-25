@@ -37,12 +37,16 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.time.format.DateTimeParseException;
 import java.time.temporal.TemporalAdjuster;
-import java.util.Iterator;
+import java.util.Comparator;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
+
+import org.joda.convert.FromString;
+import org.joda.convert.ToString;
 
 /**
  * A range of local dates.
@@ -52,12 +56,17 @@ import java.util.stream.StreamSupport;
  * Internally, the class stores the start and end dates, with the start inclusive and the end exclusive.
  * The end date is always greater than or equal to the start date.
  * <p>
- * The constants {@link LocalDate#MIN} and {@link LocalDate#MAX} can be used
+ * The constants {@code LocalDate.MIN} and {@code LocalDate.MAX} can be used
  * to indicate an unbounded far-past or far-future. Note that there is no difference
- * between a half-open and a closed range when the end is {@link LocalDate#MAX}.
+ * between a half-open and a closed range when the end is {@code LocalDate.MAX}.
+ * Empty ranges are allowed.
+ * <p>
+ * No range can end at {@code LocalDate.MIN} or {@code LocalDate.MIN.plusDays(1)}.
+ * No range can start at {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
+ * No empty range can exist at {@code LocalDate.MIN} or {@code LocalDate.MAX}.
  * <p>
  * Date ranges are not comparable. To compare the length of two ranges, it is
- * generally recommended to compare the number of days the contain.
+ * generally recommended to compare the number of days they contain.
  *
  * <h3>Implementation Requirements:</h3>
  * This class is immutable and thread-safe.
@@ -68,6 +77,14 @@ import java.util.stream.StreamSupport;
 public final class LocalDateRange
         implements Serializable {
 
+    /**
+     * The day after the MIN date.
+     */
+    private static final LocalDate MINP1 = LocalDate.MIN.plusDays(1);
+    /**
+     * The day before the MAX date.
+     */
+    private static final LocalDate MAXM1 = LocalDate.MAX.minusDays(1);
     /**
      * A range over the whole time-line.
      */
@@ -91,22 +108,27 @@ public final class LocalDateRange
     /**
      * Obtains a half-open range of dates, including the start and excluding the end.
      * <p>
-     * The range includes the start date and excludes the end date, unless the end
-     * is {@link LocalDate#MAX}.
+     * The range includes the start date and excludes the end date, unless the end is {@code LocalDate.MAX}.
      * The end date must be equal to or after the start date.
      * This definition permits an empty range located at a specific date.
+     * <p>
+     * The constants {@code LocalDate.MIN} and {@code LocalDate.MAX} can be used
+     * to indicate an unbounded far-past or far-future.
+     * <p>
+     * The start inclusive date must not be {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
+     * The end inclusive date must not be {@code LocalDate.MIN} or {@code LocalDate.MIN.plusDays(1)}.
+     * No empty range can exist at {@code LocalDate.MIN} or {@code LocalDate.MAX}.
      *
-     * @param startInclusive  the start date, inclusive, LocalDate.MIN treated as unbounded, not null
-     * @param endExclusive  the end date, exclusive, LocalDate.MAX treated as unbounded, not null
+     * @param startInclusive  the inclusive start date, not null
+     * @param endExclusive  the exclusive end date, not null
      * @return the half-open range, not null
-     * @throws DateTimeException if the end is before the start
+     * @throws DateTimeException if the end is before the start,
+     *   or the start date is {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)},
+     *   or the end date is {@code LocalDate.MIN} or {@code LocalDate.MIN.plusDays(1)}
      */
     public static LocalDateRange of(LocalDate startInclusive, LocalDate endExclusive) {
         Objects.requireNonNull(startInclusive, "startInclusive");
         Objects.requireNonNull(endExclusive, "endExclusive");
-        if (endExclusive.isBefore(startInclusive)) {
-            throw new DateTimeException("End date must on or after start date");
-        }
         return new LocalDateRange(startInclusive, endExclusive);
     }
 
@@ -115,17 +137,26 @@ public final class LocalDateRange
      * <p>
      * The range includes the start date and the end date.
      * The end date must be equal to or after the start date.
+     * <p>
+     * The constants {@code LocalDate.MIN} and {@code LocalDate.MAX} can be used
+     * to indicate an unbounded far-past or far-future. In addition, an end date of
+     * {@code LocalDate.MAX.minusDays(1)} will also create an unbounded far-future range.
+     * <p>
+     * The start inclusive date must not be {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
+     * The end inclusive date must not be {@code LocalDate.MIN}.
      * 
-     * @param startInclusive  the inclusive start date, LocalDate.MIN treated as unbounded, not null
-     * @param endInclusive  the inclusive end date, LocalDate.MAX treated as unbounded, not null
+     * @param startInclusive  the inclusive start date, not null
+     * @param endInclusive  the inclusive end date, not null
      * @return the closed range
-     * @throws DateTimeException if the end is before the start
+     * @throws DateTimeException if the end is before the start,
+     *   or the start date is {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)},
+     *   or the end date is {@code LocalDate.MIN}
      */
     public static LocalDateRange ofClosed(LocalDate startInclusive, LocalDate endInclusive) {
         Objects.requireNonNull(startInclusive, "startInclusive");
         Objects.requireNonNull(endInclusive, "endInclusive");
         if (endInclusive.isBefore(startInclusive)) {
-            throw new DateTimeException("Start date must on or before end date");
+            throw new DateTimeException("Start date must be on or before end date");
         }
         LocalDate end = (endInclusive.equals(LocalDate.MAX) ? LocalDate.MAX : endInclusive.plusDays(1));
         return new LocalDateRange(startInclusive, end);
@@ -136,8 +167,12 @@ public final class LocalDateRange
      * <p>
      * The end date is calculated as the start plus the duration.
      * The period must not be negative.
+     * <p>
+     * The constant {@code LocalDate.MIN} can be used to indicate an unbounded far-past.
+     * <p>
+     * The period must not be zero or one day when the start date is {@code LocalDate.MIN}.
      *
-     * @param startInclusive  the start date, inclusive, not null
+     * @param startInclusive  the inclusive start date, not null
      * @param period  the period from the start to the end, not null
      * @return the range, not null
      * @throws DateTimeException if the end is before the start,
@@ -151,6 +186,60 @@ public final class LocalDateRange
             throw new DateTimeException("Period must not be zero or negative");
         }
         return new LocalDateRange(startInclusive, startInclusive.plus(period));
+    }
+
+    /**
+     * Obtains an empty date range located at the specified date.
+     * <p>
+     * The empty range has zero length and contains no other dates or ranges.
+     * An empty range cannot be located at {@code LocalDate.MIN}, {@code LocalDate.MIN.plusDays(1)},
+     * {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
+     *
+     * @param date  the date where the empty range is located, not null
+     * @return the empty range, not null
+     * @throws DateTimeException if the date is {@code LocalDate.MIN}, {@code LocalDate.MIN.plusDays(1)},
+     *   {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}
+     */
+    public static LocalDateRange ofEmpty(LocalDate date) {
+        Objects.requireNonNull(date, "date");
+        return new LocalDateRange(date, date);
+    }
+
+    /**
+     * Obtains a range that is unbounded at the start and end.
+     * 
+     * @return the range, with an unbounded start and unbounded end
+     */
+    public static LocalDateRange ofUnbounded() {
+        return ALL;
+    }
+
+    /**
+     * Obtains a range up to, but not including, the specified end date.
+     * <p>
+     * The range includes all dates from the unbounded start, denoted by {@code LocalDate.MIN}, to the end date.
+     * The end date is exclusive and cannot be {@code LocalDate.MIN} or {@code LocalDate.MIN.plusDays(1)}.
+     * 
+     * @param endExclusive  the exclusive end date, {@code LocalDate.MAX} treated as unbounded, not null
+     * @return the range, with an unbounded start
+     * @throws DateTimeException if the end date is {@code LocalDate.MIN} or  {@code LocalDate.MIN.plusDays(1)}
+     */
+    public static LocalDateRange ofUnboundedStart(LocalDate endExclusive) {
+        return LocalDateRange.of(LocalDate.MIN, endExclusive);
+    }
+
+    /**
+     * Obtains a range from and including the specified start date.
+     * <p>
+     * The range includes all dates from the start date to the unbounded end, denoted by {@code LocalDate.MAX}.
+     * The start date is inclusive and cannot be {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
+     * 
+     * @param startInclusive  the inclusive start date, {@code LocalDate.MIN} treated as unbounded, not null
+     * @return the range, with an unbounded end
+     * @throws DateTimeException if the start date is {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}
+     */
+    public static LocalDateRange ofUnboundedEnd(LocalDate startInclusive) {
+        return LocalDateRange.of(startInclusive, LocalDate.MAX);
     }
 
     //-----------------------------------------------------------------------
@@ -172,6 +261,7 @@ public final class LocalDateRange
      * @return the parsed range, not null
      * @throws DateTimeParseException if the text cannot be parsed
      */
+    @FromString
     public static LocalDateRange parse(CharSequence text) {
         Objects.requireNonNull(text, "text");
         for (int i = 0; i < text.length(); i++) {
@@ -208,6 +298,18 @@ public final class LocalDateRange
      * @param endExclusive  the end date, exclusive, validated not null
      */
     private LocalDateRange(LocalDate startInclusive, LocalDate endExclusive) {
+        if (endExclusive.isBefore(startInclusive)) {
+            throw new DateTimeException("End date must be on or after start date");
+        }
+        if (startInclusive.equals(MAXM1)) {
+            throw new DateTimeException("Range must not start at LocalDate.MAX.minusDays(1)");
+        }
+        if (endExclusive.equals(MINP1)) {
+            throw new DateTimeException("Range must not end at LocalDate.MIN.plusDays(1)");
+        }
+        if (endExclusive.equals(LocalDate.MIN) || startInclusive.equals(LocalDate.MAX)) {
+            throw new DateTimeException("Empty range must not be at LocalDate.MIN or LocalDate.MAX");
+        }
         this.start = startInclusive;
         this.end = endExclusive;
     }
@@ -216,8 +318,10 @@ public final class LocalDateRange
     /**
      * Gets the start date of this range, inclusive.
      * <p>
-     * This will return {@link LocalDate#MIN} if the range is unbounded at the start.
+     * This will return {@code LocalDate#MIN} if the range is unbounded at the start.
      * In this case, the range includes all dates into the far-past.
+     * <p>
+     * This never returns {@code LocalDate.MAX} or {@code LocalDate.MAX.minusDays(1)}.
      *
      * @return the start date
      */
@@ -228,8 +332,10 @@ public final class LocalDateRange
     /**
      * Gets the end date of this range, exclusive.
      * <p>
-     * This will return {@link LocalDate#MAX} if the range is unbounded at the end.
+     * This will return {@code LocalDate.MAX} if the range is unbounded at the end.
      * In this case, the range includes all dates into the far-future.
+     * <p>
+     * This never returns {@code LocalDate.MIN} or {@code LocalDate.MIN.plusDays(1)}.
      *
      * @return the end date, exclusive
      */
@@ -240,17 +346,18 @@ public final class LocalDateRange
     /**
      * Gets the end date of this range, inclusive.
      * <p>
-     * This will return {@link LocalDate#MAX} if the range is unbounded at the end.
+     * This will return {@code LocalDate.MAX} if the range is unbounded at the end.
      * In this case, the range includes all dates into the far-future.
+     * <p>
+     * This returns the date before the end date.
+     * <p>
+     * This never returns {@code LocalDate.MIN}.
      * 
      * @return the end date, inclusive
      */
     public LocalDate getEndInclusive() {
         if (isUnboundedEnd()) {
             return LocalDate.MAX;
-        }
-        if (end.equals(LocalDate.MIN)) {
-            return LocalDate.MIN;
         }
         return end.minusDays(1);
     }
@@ -259,7 +366,9 @@ public final class LocalDateRange
     /**
      * Checks if the range is empty.
      * <p>
-     * An empty range occurs when the start date equals the inclusive end date.
+     * An empty range occurs when the start date equals the end date.
+     * <p>
+     * An empty range is never unbounded.
      * 
      * @return true if the range is empty
      */
@@ -269,6 +378,8 @@ public final class LocalDateRange
 
     /**
      * Checks if the start of the range is unbounded.
+     * <p>
+     * An unbounded range is never empty.
      * 
      * @return true if start is unbounded
      */
@@ -278,6 +389,8 @@ public final class LocalDateRange
 
     /**
      * Checks if the end of the range is unbounded.
+     * <p>
+     * An unbounded range is never empty.
      * 
      * @return true if end is unbounded
      */
@@ -295,7 +408,7 @@ public final class LocalDateRange
      * <p>
      * For example, to adjust the start to one week earlier:
      * <pre>
-     *  range = range.withStart(date -> date.minus(1, ChronoUnit.WEEKS));
+     *  range = range.withStart(date -&gt; date.minus(1, ChronoUnit.WEEKS));
      * </pre>
      * 
      * @param adjuster  the adjuster to use, not null
@@ -315,7 +428,7 @@ public final class LocalDateRange
      * <p>
      * For example, to adjust the end to one week later:
      * <pre>
-     *  range = range.withEnd(date -> date.plus(1, ChronoUnit.WEEKS));
+     *  range = range.withEnd(date -&gt; date.plus(1, ChronoUnit.WEEKS));
      * </pre>
      * 
      * @param adjuster  the adjuster to use, not null
@@ -331,9 +444,9 @@ public final class LocalDateRange
      * Checks if this range contains the specified date.
      * <p>
      * This checks if the specified date is within the bounds of this range.
-     * If this range has an unbounded start then {@code contains(LocalDate#MIN)} returns true.
-     * If this range has an unbounded end then {@code contains(LocalDate#MAX)} returns true.
      * If this range is empty then this method always returns false.
+     * Else if this range has an unbounded start then {@code contains(LocalDate#MIN)} returns true.
+     * Else if this range has an unbounded end then {@code contains(LocalDate#MAX)} returns true.
      * 
      * @param date  the date to check for, not null
      * @return true if this range contains the date
@@ -390,7 +503,7 @@ public final class LocalDateRange
     /**
      * Checks if this range overlaps the specified range.
      * <p>
-     * The result is true if the the two ranges share some part of the time-line.
+     * The result is true if the two ranges share some part of the time-line.
      * An empty range overlaps itself.
      * <p>
      * This is equivalent to {@code (isConnected(other) && !abuts(other))}.
@@ -488,25 +601,36 @@ public final class LocalDateRange
      * @return the stream of dates from the start to the end
      */
     public Stream<LocalDate> stream() {
-        Iterator<LocalDate> it = new Iterator<LocalDate>() {
+        long count = end.toEpochDay() - start.toEpochDay() + (isUnboundedEnd() ? 1 : 0);
+        Spliterator<LocalDate> spliterator = new Spliterators.AbstractSpliterator<LocalDate>(
+                count,
+                Spliterator.IMMUTABLE | Spliterator.NONNULL | Spliterator.DISTINCT | Spliterator.ORDERED |
+                        Spliterator.SORTED | Spliterator.SIZED | Spliterator.SUBSIZED) {
+
             private LocalDate current = start;
-
+            
             @Override
-            public LocalDate next() {
-                LocalDate result = current;
-                current = current.plusDays(1);
-                return result;
+            public boolean tryAdvance(Consumer<? super LocalDate> action) {
+                if (current != null) {
+                    if (current.isBefore(end)) {
+                        action.accept(current);
+                        current = current.plusDays(1);
+                        return true;
+                    }
+                    if (current.equals(LocalDate.MAX)) {
+                        action.accept(LocalDate.MAX);
+                        current = null;
+                        return true;
+                    }
+                }
+                return false;
             }
-
+            
             @Override
-            public boolean hasNext() {
-                return current.isBefore(end);
+            public Comparator<? super LocalDate> getComparator() {
+                return null;
             }
         };
-        long count = end.toEpochDay() - start.toEpochDay() + 1;
-        Spliterator<LocalDate> spliterator = Spliterators.spliterator(it, count,
-                Spliterator.IMMUTABLE | Spliterator.NONNULL | Spliterator.DISTINCT | Spliterator.ORDERED |
-                        Spliterator.SORTED | Spliterator.SIZED | Spliterator.SUBSIZED);
         return StreamSupport.stream(spliterator, false);
     }
 
@@ -569,23 +693,33 @@ public final class LocalDateRange
      * Obtains the length of this range in days.
      * <p>
      * This returns the number of days between the start and end dates.
+     * If the range is too large, the length will be {@code Integer.MAX_VALUE}.
+     * Unbounded ranges return {@code Integer.MAX_VALUE}.
      *
-     * @return the length in days
-     * @throws ArithmeticException if the length exceeds the capacity of an {@code int}
+     * @return the length in days, Integer.MAX_VALUE if unbounded or too large
      */
     public int lengthInDays() {
-        return Math.toIntExact(end.toEpochDay() - start.toEpochDay());
+        if (isUnboundedStart() || isUnboundedEnd()) {
+            return Integer.MAX_VALUE;
+        }
+        long length = end.toEpochDay() - start.toEpochDay();
+        return length > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) length;
     }
 
     /**
      * Obtains the length of this range as a period.
      * <p>
      * This returns the {@link Period} between the start and end dates.
+     * Unbounded ranges throw {@link ArithmeticException}.
      *
      * @return the period of the range
-     * @throws ArithmeticException if the calculation exceeds the capacity of {@code Period}
+     * @throws ArithmeticException if the calculation exceeds the capacity of {@code Period},
+     *   or the range is unbounded
      */
     public Period toPeriod() {
+        if (isUnboundedStart() || isUnboundedEnd()) {
+            throw new ArithmeticException("Unbounded range cannot be converted to a Period");
+        }
         return Period.between(start, end);
     }
 
@@ -631,6 +765,7 @@ public final class LocalDateRange
      * @return a string representation of this date, not null
      */
     @Override
+    @ToString
     public String toString() {
         return start.toString() + '/' + end.toString();
     }
